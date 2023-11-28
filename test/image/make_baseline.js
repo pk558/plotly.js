@@ -29,15 +29,21 @@ var getMockList = require('./assets/get_mock_list');
  *
  *      npm run baseline mathjax3
  *
+ *  Generate or (re-generate) baselines using mathjax4:
+ *
+ *      npm run baseline mathjax4
+ *
  */
 
 var argv = minimist(process.argv.slice(2), {});
 
 var allMockList = [];
-var mathjax3;
+var mathjaxVersion = 2;
 argv._.forEach(function(pattern) {
     if(pattern === 'mathjax3') {
-        mathjax3 = true;
+        mathjaxVersion = 3;
+    } else if(pattern === 'mathjax4') {
+        mathjaxVersion = 4;
     } else {
         var mockList = getMockList(pattern);
 
@@ -49,7 +55,7 @@ argv._.forEach(function(pattern) {
     }
 });
 
-if(mathjax3) {
+if(mathjaxVersion >= 3) {
     allMockList = [
         'legend_mathjax_title_and_items',
         'mathjax',
@@ -67,7 +73,7 @@ console.log('Please wait for the process to complete.');
 var p = spawn(
     'python3', [
         path.join('test', 'image', 'make_baseline.py'),
-        (mathjax3 ? 'mathjax3' : '') + '= ' + allMockList.join(' ')
+        (mathjaxVersion >= 3 ? 'mathjax' + mathjaxVersion : '') + '= ' + allMockList.join(' ')
     ]
 );
 try {

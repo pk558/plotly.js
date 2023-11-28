@@ -183,7 +183,8 @@ function texToSVG(_texString, _config, _callback) {
 
     if(
         MathJaxVersion !== 2 &&
-        MathJaxVersion !== 3
+        MathJaxVersion !== 3 &&
+        MathJaxVersion !== 4
     ) {
         Lib.warn('No MathJax version:', MathJax.version);
         return;
@@ -309,7 +310,7 @@ function texToSVG(_texString, _config, _callback) {
             resetRenderer2,
             resetConfig2
         );
-    } else if(MathJaxVersion === 3) {
+    } else if(MathJaxVersion >= 3) {
         setConfig3();
         setRenderer3();
         MathJax.startup.defaultReady();

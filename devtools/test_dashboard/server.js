@@ -13,8 +13,6 @@ config.optimization = { minimize: false };
 var args = minimist(process.argv.slice(2), {});
 var PORT = args.port || 3000;
 var strict = args.strict;
-var mathjax3 = args.mathjax3;
-var mathjax3chtml = args.mathjax3chtml;
 
 if(strict) config.entry = './lib/index-strict.js';
 
@@ -90,8 +88,10 @@ compiler.run(function(devtoolsErr, devtoolsStats) {
                         // open up browser window
                         open('http://localhost:' + PORT + '/devtools/test_dashboard/index' + (
                             strict ? '-strict' :
-                            mathjax3 ? '-mathjax3' :
-                            mathjax3chtml ? '-mathjax3chtml' : ''
+                            args.mathjax3 ? '-mathjax3' :
+                            args.mathjax3chtml ? '-mathjax3chtml' :
+                            args.mathjax4 ? '-mathjax4' :
+                            args.mathjax4chtml ? '-mathjax4chtml' : ''
                         ) + '.html');
 
                         firstBundle = false;

@@ -234,6 +234,24 @@ jobs:
           paths:
             - plotly.js
 
+  make-baselines-mathjax4:
+    docker:
+      - image: circleci/python:3.8.9
+    working_directory: ~/plotly.js
+    steps:
+      - attach_workspace:
+          at: ~/
+      - run:
+          name: Install kaleido, plotly.io and required fonts
+          command: .circleci/env_image.sh
+      - run:
+          name: Create mathjax v3 png files
+          command: .circleci/test.sh make-baselines-mathjax4
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - plotly.js
+
   make-baselines:
     parallelism: 4
     docker:
@@ -277,6 +295,20 @@ jobs:
       - run:
           name: Compare pixels of mathjax v3 baselines
           command: .circleci/test.sh test-image-mathjax3
+      - store_artifacts:
+          path: build
+          destination: /
+
+  test-baselines-mathjax4:
+    docker:
+      - image: circleci/node:16.9.0
+    working_directory: ~/plotly.js
+    steps:
+      - attach_workspace:
+          at: ~/
+      - run:
+          name: Compare pixels of mathjax v3 baselines
+          command: .circleci/test.sh test-image-mathjax4
       - store_artifacts:
           path: build
           destination: /
@@ -450,6 +482,12 @@ workflows:
       - test-baselines-mathjax3:
           requires:
             - make-baselines-mathjax3
+      - make-baselines-mathjax4:
+          requires:
+            - install-and-cibuild
+      - test-baselines-mathjax4:
+          requires:
+            - make-baselines-mathjax4
       - make-baselines:
           requires:
             - install-and-cibuild

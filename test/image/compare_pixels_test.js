@@ -41,10 +41,12 @@ if(argv._.length === 0) {
 
 // Build list of mocks to compare
 var allMockList = [];
-var mathjax3;
+var mathjaxVersion = 2;
 argv._.forEach(function(pattern) {
     if(pattern === 'mathjax3') {
-        mathjax3 = true;
+        mathjaxVersion = 3;
+    } else if(pattern === 'mathjax4') {
+        mathjaxVersion = 4;
     } else {
         var mockList = getMockList(pattern);
 
@@ -66,7 +68,7 @@ allMockList = allMockList.filter(function(a) {
     );
 });
 
-if(mathjax3) {
+if(mathjaxVersion >= 3) {
     allMockList = [
         'legend_mathjax_title_and_items',
         'mathjax',
@@ -108,13 +110,14 @@ for(var i = 0; i < allMockList.length; i++) {
         'gl3d_bunny-hull'
     ].indexOf(mockName) !== -1;
 
-    if(mathjax3) mockName = 'mathjax3___' + mockName;
+    if(mathjaxVersion === 3) mockName = 'mathjax3___' + mockName;
+    if(mathjaxVersion === 4) mockName = 'mathjax4___' + mockName;
 
     var imagePaths = getImagePaths(mockName);
     var base = imagePaths.baseline;
     var test = imagePaths.test;
 
-    if(!common.doesFileExist(test) && !mathjax3) {
+    if(!common.doesFileExist(test) && mathjaxVersion === 2) {
         console.log('- skip:', mockName);
         skipped.push(mockName);
         continue;

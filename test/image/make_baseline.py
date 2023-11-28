@@ -33,6 +33,14 @@ if 'mathjax3' in sys.argv or 'mathjax3=' in sys.argv :
     mathjax_version = 3
     print('Kaleido using MathJax v3')
 
+if 'mathjax4' in sys.argv or 'mathjax4=' in sys.argv :
+    # until https://github.com/plotly/Kaleido/issues/124 is addressed
+    # we are uanble to use local mathjax v4 installed in node_modules
+    # for now let's download it from the internet:
+    pio.kaleido.scope.mathjax = 'https://cdn.jsdelivr.net/npm/mathjax@4.0.0-beta.4/tex-svg.js'
+    mathjax_version = 4
+    print('Kaleido using MathJax v4')
+
 pio.templates.default = 'none'
 pio.kaleido.scope.plotlyjs = os.path.join(root, 'build', 'plotly.js')
 
@@ -90,8 +98,8 @@ if len(allNames) == 0 :
 failed = []
 for name in allNames :
     outName = name
-    if mathjax_version == 3 :
-        outName = 'mathjax3___' + name
+    if mathjax_version >= 3 :
+        outName = 'mathjax' + str(mathjax_version) + '___' + name
 
     print(outName)
 
