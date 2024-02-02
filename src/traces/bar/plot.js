@@ -273,19 +273,42 @@ function plot(gd, plotinfo, cdModule, traceLayer, opts, makeOnCompleteCallback) 
                 return fixpx(Math.max(Math.min(crPx, maxRadius), 0));
             }
             // Exclude anything which is not explicitly a bar or histogram chart from rounding
-            var r = (isBar || isHistogram) ? calcCornerRadius(t.cornerradiusvalue, t.cornerradiusform) : 0;
+            var R = (isBar || isHistogram) ? calcCornerRadius(t.cornerradiusvalue, t.cornerradiusform) : 0;
             // Construct path string for bar
             var path = 'M' + x0 + ',' + y0 + 'V' + y1 + 'H' + x1 + 'V' + y0 + 'Z';
             var overhead = 0;
-            if(r) {
-                path = 'M' + x0 + ',' + y0 + 'V' + y1 + 'H' + x1 + 'V' + y0 + 'Z';
+            if(R) {
+                var _x0 = Math.min(x0, x1);
+                var _x1 = Math.max(x0, x1);
+                var _y0 = Math.min(y0, y1);
+                var _y1 = Math.max(y0, y1);
+
+                var dx = _x1 - _x0;
+                var dy = _y1 - _y0;
+
+                var r = Math.min(R, dx / 2, dy / 2);
+
+                var arc = function(rx, ry) { return r ? 'a' + pos(r, r) + ' 0 0 1 ' + pos(rx, ry) : ''; };
+
+                path = (
+                   'M' + pos(_x0, _y0 + r) +
+                   arc(r, -r) +
+                   'L' + pos(_x1 - r, _y0) +
+                   arc(r, r) +
+                   'L' + pos(_x1, _y1 - r) +
+                   arc(-r, r) +
+                   'L' + pos(_x0 + r, _y1) +
+                   arc(-r, -r) + 'Z'
+                );
+
+
                 /*
                 // Bar has cornerradius, and nonzero size
                 // Check amount of 'overhead' (bars stacked above this one)
                 // to see whether we need to round or not
                 var refPoint = sign(di.s0) === 0 || sign(di.s) === sign(di.s0) ? di.s1 : di.s0;
                 overhead = fixpx(!di.hasB ? Math.abs(c2p(outerBound, true) - c2p(refPoint, true)) : 0);
-                if(overhead < r) {
+                if(overhead < R) {
                     // Calculate parameters for rounded corners
                     var xdir = dirSign(x0, x1);
                     var ydir = dirSign(y0, y1);
@@ -309,7 +332,7 @@ function plot(gd, plotinfo, cdModule, traceLayer, opts, makeOnCompleteCallback) 
                 Drawing.singlePointStyle(di, sel, trace, styleFns, gd);
             }
 
-            appendBarText(gd, plotinfo, bar, cd, i, x0, x1, y0, y1, r, overhead, opts, makeOnCompleteCallback);
+            appendBarText(gd, plotinfo, bar, cd, i, x0, x1, y0, y1, R, overhead, opts, makeOnCompleteCallback);
 
             if(plotinfo.layerClipId) {
                 Drawing.hideOutsideRangePoint(di, bar.select('text'), xa, ya, trace.xcalendar, trace.ycalendar);
@@ -947,6 +970,10 @@ function calcTextinfo(cd, index, xa, ya) {
     }
 
     return text.join('<br>');
+}
+
+function pos(x, y) {
+    return x + ',' + y;
 }
 
 module.exports = {
