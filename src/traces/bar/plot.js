@@ -288,8 +288,6 @@ function plot(gd, plotinfo, cdModule, traceLayer, opts, makeOnCompleteCallback) 
 
                 var r = Math.min(R, dx / 2, dy / 2);
 
-                var arc = function(rx, ry, _r) { return _r ? 'a' + pos(_r, _r) + ' 0 0 1 ' + pos(rx, ry) : ''; };
-
                 path = (
                    'M' + pos(_x0, _y0 + r) +
                    arc(r, -r, r) +
@@ -974,6 +972,10 @@ function calcTextinfo(cd, index, xa, ya) {
 
 function pos(x, y) {
     return x + ',' + y;
+}
+
+function arc(rx, ry, _r) {
+    return _r ? 'a' + pos(_r, _r) + ' 0 0 1 ' + pos(rx, ry) : '';
 }
 
 module.exports = {
