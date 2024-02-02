@@ -277,7 +277,7 @@ function plot(gd, plotinfo, cdModule, traceLayer, opts, makeOnCompleteCallback) 
             // Construct path string for bar
             var path = 'M' + x0 + ',' + y0 + 'V' + y1 + 'H' + x1 + 'V' + y0 + 'Z';
             var overhead = 0;
-            if(R) {
+            if(t.cornerradiusvalue) {
                 var _x0 = Math.min(x0, x1);
                 var _x1 = Math.max(x0, x1);
                 var _y0 = Math.min(y0, y1);
