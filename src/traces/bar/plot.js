@@ -288,17 +288,17 @@ function plot(gd, plotinfo, cdModule, traceLayer, opts, makeOnCompleteCallback) 
 
                 var r = Math.min(R, dx / 2, dy / 2);
 
-                var arc = function(rx, ry) { return r ? 'a' + pos(r, r) + ' 0 0 1 ' + pos(rx, ry) : ''; };
+                var arc = function(rx, ry, _r) { return _r ? 'a' + pos(_r, _r) + ' 0 0 1 ' + pos(rx, ry) : ''; };
 
                 path = (
                    'M' + pos(_x0, _y0 + r) +
-                   arc(r, -r) +
+                   arc(r, -r, r) +
                    'L' + pos(_x1 - r, _y0) +
-                   arc(r, r) +
+                   arc(r, r, r) +
                    'L' + pos(_x1, _y1 - r) +
-                   arc(-r, r) +
+                   arc(-r, r, r) +
                    'L' + pos(_x0 + r, _y1) +
-                   arc(-r, -r) + 'Z'
+                   arc(-r, -r, r) + 'Z'
                 );
 
 
