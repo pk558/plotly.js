@@ -287,16 +287,40 @@ function plot(gd, plotinfo, cdModule, traceLayer, opts, makeOnCompleteCallback) 
                 var dy = _y1 - _y0;
 
                 var r = Math.min(R, dx / 2, dy / 2);
+                var r00 = r;
+                var r01 = r;
+                var r10 = r;
+                var r11 = r;
+
+                if(!di.hasB) {
+                    if(isHorizontal) {
+                        if(x0 < x1) {
+                            r00 = 0;
+                            r01 = 0;
+                        } else {
+                            r10 = 0;
+                            r11 = 0;
+                        }
+                    } else { // vertical
+                        if(y0 < y1) {
+                            r00 = 0;
+                            r10 = 0;
+                        } else {
+                            r01 = 0;
+                            r11 = 0;
+                        }
+                    }
+                }
 
                 path = (
-                   'M' + pos(_x0, _y0 + r) +
-                   arc(r, -r, r) +
-                   'L' + pos(_x1 - r, _y0) +
-                   arc(r, r, r) +
-                   'L' + pos(_x1, _y1 - r) +
-                   arc(-r, r, r) +
-                   'L' + pos(_x0 + r, _y1) +
-                   arc(-r, -r, r) + 'Z'
+                   'M' + pos(_x0, _y0 + r00) +
+                   arc(r, -r, r00) +
+                   'L' + pos(_x1 - r10, _y0) +
+                   arc(r, r, r10) +
+                   'L' + pos(_x1, _y1 - r11) +
+                   arc(-r, r, r11) +
+                   'L' + pos(_x0 + r01, _y1) +
+                   arc(-r, -r, r01) + 'Z'
                 );
 
 
