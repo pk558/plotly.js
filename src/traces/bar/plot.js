@@ -278,6 +278,9 @@ function plot(gd, plotinfo, cdModule, traceLayer, opts, makeOnCompleteCallback) 
             var path = 'M' + x0 + ',' + y0 + 'V' + y1 + 'H' + x1 + 'V' + y0 + 'Z';
             var overhead = 0;
             if(t.cornerradiusvalue) {
+                var refPoint = sign(di.s0) === 0 || sign(di.s) === sign(di.s0) ? di.s1 : di.s0;
+                overhead = fixpx(!di.hasB ? Math.abs(c2p(outerBound, true) - c2p(refPoint, true)) : 0);
+
                 var _x0 = Math.min(x0, x1);
                 var _x1 = Math.max(x0, x1);
                 var _y0 = Math.min(y0, y1);
@@ -287,6 +290,10 @@ function plot(gd, plotinfo, cdModule, traceLayer, opts, makeOnCompleteCallback) 
                 var dy = _y1 - _y0;
 
                 var r = Math.min(R, dx / 2, dy / 2);
+                if(overhead > R) {
+                    r = 0;
+                }
+
                 var r00 = r;
                 var r01 = r;
                 var r10 = r;
@@ -312,6 +319,7 @@ function plot(gd, plotinfo, cdModule, traceLayer, opts, makeOnCompleteCallback) 
                     }
                 }
 
+
                 path = (
                    'M' + pos(_x0, _y0 + r00) +
                    arc(1, -1, r00) +
@@ -322,25 +330,6 @@ function plot(gd, plotinfo, cdModule, traceLayer, opts, makeOnCompleteCallback) 
                    'L' + pos(_x0 + r01, _y1) +
                    arc(-1, -1, r01) + 'Z'
                 );
-
-
-                /*
-                // Bar has cornerradius, and nonzero size
-                // Check amount of 'overhead' (bars stacked above this one)
-                // to see whether we need to round or not
-                var refPoint = sign(di.s0) === 0 || sign(di.s) === sign(di.s0) ? di.s1 : di.s0;
-                overhead = fixpx(!di.hasB ? Math.abs(c2p(outerBound, true) - c2p(refPoint, true)) : 0);
-                if(overhead < R) {
-                    // Calculate parameters for rounded corners
-                    var xdir = dirSign(x0, x1);
-                    var ydir = dirSign(y0, y1);
-                    // Sweep direction for rounded corner arcs
-                    var cornersweep = (xdir === -ydir) ? 1 : 0;
-                } else {
-                    // There is a cornerradius, but bar is too far down the stack to be rounded; just draw a rectangle
-                    path = rectanglePath;
-                }
-                */
             }
 
             var sel = transition(Lib.ensureSingle(bar, 'path'), fullLayout, opts, makeOnCompleteCallback);
