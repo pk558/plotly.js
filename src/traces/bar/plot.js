@@ -322,13 +322,13 @@ function plot(gd, plotinfo, cdModule, traceLayer, opts, makeOnCompleteCallback) 
 
                 path = (
                    'M' + pos(_x0, _y0 + r00) +
-                   arc(r00, 1, -1) +
+                   arc(r00, r00, -r00) +
                    'L' + pos(_x1 - r10, _y0) +
-                   arc(r10, 1, 1) +
+                   arc(r10, r10, r10) +
                    'L' + pos(_x1, _y1 - r11) +
-                   arc(r11, -1, 1) +
+                   arc(r11, -r11, r11) +
                    'L' + pos(_x0 + r01, _y1) +
-                   arc(r01, -1, -1) + 'Z'
+                   arc(r01, -r01, -r01) + 'Z'
                 );
             }
 
@@ -988,7 +988,7 @@ function pos(x, y) {
 }
 
 function arc(r, x, y) {
-    return 'a' + pos(r, r) + ' 0 0 1 ' + pos(r * x, r * y);
+    return 'a' + pos(r, r) + ' 0 0 1 ' + pos(x, y);
 }
 
 module.exports = {
