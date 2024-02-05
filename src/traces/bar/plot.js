@@ -319,6 +319,34 @@ function plot(gd, plotinfo, cdModule, traceLayer, opts, makeOnCompleteCallback) 
                     }
                 }
 
+                // Helper variables to help with extending rounding down to lower bars
+                var h = Math.abs(isHorizontal ? dx : dy) + overhead;
+                var dh1 = (h < r) ? r - Math.sqrt(h * (2 * r - h)) : 0;
+                var dh2 = (overhead > 0) ? Math.sqrt(overhead * (2 * r - overhead)) : 0;
+
+                var tx00 = 0;
+                var ty00 = 0;
+                var tx10 = 0;
+                var ty10 = 0;
+                var tx11 = 0;
+                var ty11 = 0;
+                var tx01 = 0;
+                var ty01 = 0;
+
+                // TODO: adjust tx, ty below and use them in arc function (2nd and 3rd args) as well as path
+                if(isHorizontal) {
+                    if(x0 < x1) {
+
+                    } else {
+
+                    }
+                } else { // vertical
+                    if(y0 < y1) {
+
+                    } else {
+
+                    }
+                }
 
                 path = (
                    'M' + pos(_x0, _y0 + r00) +
@@ -330,6 +358,18 @@ function plot(gd, plotinfo, cdModule, traceLayer, opts, makeOnCompleteCallback) 
                    'L' + pos(_x0 + r01, _y1) +
                    arc(r01, -r01, -r01) + 'Z'
                 );
+
+/*
+                path = 'M' + (_x0 + r00 * xdir + dh1) + ',' + _y0 +
+                    'a ' + r00 + ',' + r00 + ' 0 0 ' + cornersweep + ' ' + r00 * -xdir + ',' + r00 * ydir +
+                    'V' + Math.min(_y1 - (r01 - overhead) * ydir, _y0) +
+                    'A ' + r01 + ',' + r01 + ' 0 0 ' + cornersweep + ' ' + (_x0 + r01 * xdir - dh2) + ',' + _y1 +
+                    'H' + (_x1 - r11 * xdir + dh2) +
+                    'A ' + r11 + ',' + r11 + ' 0 0 ' + cornersweep + ' ' + (_x1 - dh1 * xdir) + ',' + Math.min(_y1 - (r11 - overhead) * ydir, _y0) +
+                    'V' + (_y0 + r10 * ydir) +
+                    'A ' + r10 + ',' + r10 + ' 0 0 ' + cornersweep + ' ' + (_x1 - r10 * xdir) + ',' + _y0 +
+                    'Z';
+*/
             }
 
             var sel = transition(Lib.ensureSingle(bar, 'path'), fullLayout, opts, makeOnCompleteCallback);
