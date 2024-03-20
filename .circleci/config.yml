@@ -56,7 +56,7 @@ jobs:
     working_directory: ~/plotly.js
     steps:
       - browser-tools/install-browser-tools: &browser-versions
-          chrome-version: 116.0.5845.110
+          chrome-version: 123.0.6312.58
           install-firefox: false
           install-geckodriver: false
       - attach_workspace:
@@ -93,7 +93,7 @@ jobs:
     working_directory: ~/plotly.js
     steps:
       - browser-tools/install-browser-tools: &browser-versions
-          chrome-version: 116.0.5845.110
+          chrome-version: 123.0.6312.58
           install-firefox: false
           install-geckodriver: false
       - attach_workspace:
@@ -113,7 +113,7 @@ jobs:
     working_directory: ~/plotly.js
     steps:
       - browser-tools/install-browser-tools: &browser-versions
-          chrome-version: 116.0.5845.110
+          chrome-version: 123.0.6312.58
           install-firefox: false
           install-geckodriver: false
       - attach_workspace:
@@ -133,7 +133,7 @@ jobs:
     working_directory: ~/plotly.js
     steps:
       - browser-tools/install-browser-tools: &browser-versions
-          chrome-version: 116.0.5845.110
+          chrome-version: 123.0.6312.58
           install-firefox: false
           install-geckodriver: false
       - attach_workspace:
@@ -152,7 +152,7 @@ jobs:
     working_directory: ~/plotly.js
     steps:
       - browser-tools/install-browser-tools: &browser-versions
-          chrome-version: 116.0.5845.110
+          chrome-version: 123.0.6312.58
           install-firefox: false
           install-geckodriver: false
       - attach_workspace:
@@ -171,7 +171,7 @@ jobs:
     working_directory: ~/plotly.js
     steps:
       - browser-tools/install-browser-tools: &browser-versions
-          chrome-version: 116.0.5845.110
+          chrome-version: 123.0.6312.58
           install-firefox: false
           install-geckodriver: false
       - attach_workspace:
