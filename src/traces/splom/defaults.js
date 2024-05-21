@@ -8,7 +8,8 @@ var subTypes = require('../scatter/subtypes');
 var handleMarkerDefaults = require('../scatter/marker_defaults');
 var mergeLength = require('../parcoords/merge_length');
 var isOpenSymbol = require('../scattergl/helpers').isOpenSymbol;
-var histogramSupplyDefaults = require('../histogram/defaults');
+var histogramSupplyDefaults = require('../histogram').supplyDefaults;
+var histogramSupplyLayoutDefaults = require('../histogram').supplyLayoutDefaults;
 
 module.exports = function supplyDefaults(traceIn, traceOut, defaultColor, layout) {
     function coerce(attr, dflt) {
@@ -21,35 +22,6 @@ module.exports = function supplyDefaults(traceIn, traceOut, defaultColor, layout
     });
 
     var showDiag = coerce('diagonal.visible');
-    if(showDiag) {
-        var diagonalTraceType = coerce('diagonal.type');
-        if(diagonalTraceType === 'histogram') {
-            var diagonalTraces = [];
-            for(var i = 0; i < dimensions.length; i++) { //TODO: skip invisible dimensions?
-                var diagonalTraceIn = {
-                    visible: true,
-                    showlegend: false,
-                    type: 'histogram',
-                    x: dimensions[i].values,
-                }; // TODO: should we inherit something from splom?
-
-                console.log(diagonalTraceIn)
-
-                var diagonalTraceOut = {};
-                histogramSupplyDefaults(diagonalTraceIn, diagonalTraceOut, defaultColor, layout);
-
-                diagonalTraceOut.xaxis = 'x' + (i ? i + 1 : ''), // TODO: Fix me!
-                diagonalTraceOut.yaxis = 'y' + (i ? i + 1 : ''), // TODO: Fix me!
-                //diagonalTraceOut.yaxis = 'y' + ((4 - i) ? (4 - i) : ''), // TODO: Fix me!
-
-                diagonalTraces.push(diagonalTraceOut);
-            }
-            console.log(diagonalTraces)
-
-            traceOut._diagonalTraces = diagonalTraces;
-        }
-    }
-
     var showUpper = coerce('showupperhalf');
     var showLower = coerce('showlowerhalf');
 
@@ -75,6 +47,37 @@ module.exports = function supplyDefaults(traceIn, traceOut, defaultColor, layout
     handleAxisDefaults(traceIn, traceOut, layout, coerce);
 
     Lib.coerceSelectionMarkerOpacity(traceOut, coerce);
+
+    if(showDiag) {
+        var diagonalTraceType = coerce('diagonal.type');
+
+        if(diagonalTraceType === 'histogram') {
+            if(!gd._fullLayout) gd._fullLayout = {};
+            histogramSupplyLayoutDefaults(layout, gd._fullLayout, gd._fullData);
+
+            var diagonalTraces = [];
+            for(var i = 0; i < dimensions.length; i++) { //TODO: skip invisible dimensions?
+                var diagonalTraceIn = {
+                    visible: true,
+                    showlegend: false,
+                    type: 'histogram',
+                    x: dimensions[i].values,
+                    xaxis: 'x' + (i ? i + 1 : ''), // TODO: Fix me!
+                    yaxis: 'y' + (i ? i + 1 : ''), // TODO: Fix me!
+                }; // TODO: should we inherit something from splom?
+
+                var diagonalTraceOut = {};
+                histogramSupplyDefaults(diagonalTraceIn, diagonalTraceOut, defaultColor, layout);
+
+                console.log(diagonalTraceOut.xaxis)
+                console.log(diagonalTraceOut.yaxis)
+
+                diagonalTraces.push(diagonalTraceOut);
+            }
+
+            traceOut._diagonalTraces = diagonalTraces;
+        }
+    }
 };
 
 function dimensionDefaults(dimIn, dimOut) {
