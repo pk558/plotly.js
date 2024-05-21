@@ -25,18 +25,27 @@ module.exports = function supplyDefaults(traceIn, traceOut, defaultColor, layout
         var diagonalTraceType = coerce('diagonal.type');
         if(diagonalTraceType === 'histogram') {
             var diagonalTraces = [];
-            for(var i = 0; i < dimensions.length; i++) {
+            for(var i = 0; i < dimensions.length; i++) { //TODO: skip invisible dimensions?
                 var diagonalTraceIn = {
                     visible: true,
                     showlegend: false,
                     type: 'histogram',
-                    x: dimensions[i].values
+                    x: dimensions[i].values,
                 }; // TODO: should we inherit something from splom?
+
+                console.log(diagonalTraceIn)
 
                 var diagonalTraceOut = {};
                 histogramSupplyDefaults(diagonalTraceIn, diagonalTraceOut, defaultColor, layout);
+
+                diagonalTraceOut.xaxis = 'x' + (i ? i + 1 : ''), // TODO: Fix me!
+                diagonalTraceOut.yaxis = 'y' + (i ? i + 1 : ''), // TODO: Fix me!
+                //diagonalTraceOut.yaxis = 'y' + ((4 - i) ? (4 - i) : ''), // TODO: Fix me!
+
                 diagonalTraces.push(diagonalTraceOut);
             }
+            console.log(diagonalTraces)
+
             traceOut._diagonalTraces = diagonalTraces;
         }
     }
