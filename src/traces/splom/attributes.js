@@ -156,7 +156,7 @@ module.exports = {
                 'scattergl',
                 'histogram',
             ],
-            dflt: 'histogram',//'scattergl',
+            dflt: 'scattergl',
             editType: 'calc',
             description: [
                 'Sets the type of traces used in diagonal views.'
