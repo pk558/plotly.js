@@ -33,7 +33,9 @@ function plotOne(gd, cd0) {
     // regl-splom's default grid starts from bottom-left
     matrixOpts.lower = trace.showupperhalf;
     matrixOpts.upper = trace.showlowerhalf;
-    matrixOpts.diagonal = trace.diagonal.visible;
+    matrixOpts.diagonal =
+        trace.diagonal.visible &&
+        trace.diagonal.type === 'scattergl';
 
     var visibleDims = trace._visibleDims;
     var visibleLength = cdata.length;

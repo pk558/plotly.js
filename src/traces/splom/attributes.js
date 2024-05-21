@@ -150,9 +150,20 @@ module.exports = {
             ].join(' ')
         },
 
-        // type: 'scattergl' | 'histogram' | 'box' | 'violin'
-        // ...
-        // more options
+        type: {
+            valType: 'enumerated',
+            values: [
+                'scattergl',
+                'histogram',
+            ],
+            dflt: 'scattergl',
+            editType: 'calc',
+            description: [
+                'Sets the type of traces used in diagonal views.'
+            ].join(' ')
+        },
+
+        // TODO: more options
 
         editType: 'calc'
     },

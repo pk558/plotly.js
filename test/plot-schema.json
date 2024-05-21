@@ -85138,6 +85138,16 @@
     "diagonal": {
      "editType": "calc",
      "role": "object",
+     "type": {
+      "description": "Sets the type of traces used in diagonal views.",
+      "dflt": "scattergl",
+      "editType": "calc",
+      "valType": "enumerated",
+      "values": [
+       "scattergl",
+       "histogram"
+      ]
+     },
      "visible": {
       "description": "Determines whether or not subplots on the diagonal are displayed.",
       "dflt": true,

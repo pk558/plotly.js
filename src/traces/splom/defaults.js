@@ -20,6 +20,10 @@ module.exports = function supplyDefaults(traceIn, traceOut, defaultColor, layout
     });
 
     var showDiag = coerce('diagonal.visible');
+    if(showDiag) {
+        coerce('diagonal.type');
+    }
+
     var showUpper = coerce('showupperhalf');
     var showLower = coerce('showlowerhalf');
 
