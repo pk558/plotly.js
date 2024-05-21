@@ -22,8 +22,9 @@ module.exports = function supplyDefaults(traceIn, traceOut, defaultColor, layout
 
     var showDiag = coerce('diagonal.visible');
     if(showDiag) {
-        var diagTraceType = coerce('diagonal.type');
-        if(diagTraceType === 'histogram') {
+        var diagonalTraceType = coerce('diagonal.type');
+        if(diagonalTraceType === 'histogram') {
+            var diagonalHistograms = [];
             for(var i = 0; i < dimensions.length; i++) {
                 var diagonalTraceIn = {
                     visible: true,
@@ -33,9 +34,10 @@ module.exports = function supplyDefaults(traceIn, traceOut, defaultColor, layout
                 }; // TODO: should we inherit something from splom?
 
                 var diagonalTraceOut = {};
-
                 histogramSupplyDefaults(diagonalTraceIn, diagonalTraceOut, defaultColor, layout);
+                diagonalHistograms.push(diagonalTraceOut);
             }
+            traceOut._diagonalHistograms = diagonalHistograms;
         }
     }
 
