@@ -8,6 +8,7 @@ var subTypes = require('../scatter/subtypes');
 var handleMarkerDefaults = require('../scatter/marker_defaults');
 var mergeLength = require('../parcoords/merge_length');
 var isOpenSymbol = require('../scattergl/helpers').isOpenSymbol;
+var histogramSupplyDefaults = require('../histogram/defaults');
 
 module.exports = function supplyDefaults(traceIn, traceOut, defaultColor, layout) {
     function coerce(attr, dflt) {
@@ -21,7 +22,21 @@ module.exports = function supplyDefaults(traceIn, traceOut, defaultColor, layout
 
     var showDiag = coerce('diagonal.visible');
     if(showDiag) {
-        coerce('diagonal.type');
+        var diagTraceType = coerce('diagonal.type');
+        if(diagTraceType === 'histogram') {
+            for(var i = 0; i < dimensions.length; i++) {
+                var diagonalTraceIn = {
+                    visible: true,
+                    showlegend: false,
+                    type: 'histogram',
+                    x: dimensions[i].values
+                }; // TODO: should we inherit something from splom?
+
+                var diagonalTraceOut = {};
+
+                histogramSupplyDefaults(diagonalTraceIn, diagonalTraceOut, defaultColor, layout);
+            }
+        }
     }
 
     var showUpper = coerce('showupperhalf');
