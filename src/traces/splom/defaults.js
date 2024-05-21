@@ -24,7 +24,7 @@ module.exports = function supplyDefaults(traceIn, traceOut, defaultColor, layout
     if(showDiag) {
         var diagonalTraceType = coerce('diagonal.type');
         if(diagonalTraceType === 'histogram') {
-            var diagonalHistograms = [];
+            var diagonalTraces = [];
             for(var i = 0; i < dimensions.length; i++) {
                 var diagonalTraceIn = {
                     visible: true,
@@ -35,9 +35,9 @@ module.exports = function supplyDefaults(traceIn, traceOut, defaultColor, layout
 
                 var diagonalTraceOut = {};
                 histogramSupplyDefaults(diagonalTraceIn, diagonalTraceOut, defaultColor, layout);
-                diagonalHistograms.push(diagonalTraceOut);
+                diagonalTraces.push(diagonalTraceOut);
             }
-            traceOut._diagonalHistograms = diagonalHistograms;
+            traceOut._diagonalTraces = diagonalTraces;
         }
     }
 
