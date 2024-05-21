@@ -13,6 +13,9 @@ var sceneUpdate = require('./scene_update');
 var BADNUM = require('../../constants/numerical').BADNUM;
 var TOO_MANY_POINTS = require('../scattergl/constants').TOO_MANY_POINTS;
 
+var histogramCalc = require('../histogram').calc;
+var histogramCrossTraceDefaults = require('../histogram').crossTraceDefaults;
+
 module.exports = function calc(gd, trace) {
     var dimensions = trace.dimensions;
     var commonLength = trace._length;
@@ -96,6 +99,21 @@ module.exports = function calc(gd, trace) {
 
     scene.selectedOptions = convertMarkerSelection(gd, trace, trace.selected);
     scene.unselectedOptions = convertMarkerSelection(gd, trace, trace.unselected);
+
+    var fullLayout = gd._fullLayout;
+
+    var _diagonalTraces = trace._diagonalTraces || [];
+    for(i = 0; i < _diagonalTraces.length; i++) {
+        var diagonalTrace = _diagonalTraces[i];
+        if(diagonalTrace.type = 'histogram') {
+
+            if(!fullLayout._histogramBinOpts) fullLayout._histogramBinOpts = {};
+
+            Lib.pushUnique(fullLayout._visibleModules, histogramCrossTraceDefaults);
+
+            histogramCalc(gd, diagonalTrace);
+        }
+    }
 
     return [{x: false, y: false, t: {}, trace: trace}];
 };

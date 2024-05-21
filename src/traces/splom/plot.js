@@ -6,6 +6,8 @@ var Lib = require('../../lib');
 var AxisIDs = require('../../plots/cartesian/axis_ids');
 var selectMode = require('../../components/dragelement/helpers').selectMode;
 
+//var histnormPlot = require('../histogram').plot;
+
 module.exports = function plot(gd, _, splomCalcData) {
     if(!splomCalcData.length) return;
 
