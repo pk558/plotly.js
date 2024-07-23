@@ -150,6 +150,8 @@ function draw(gd, titleClass, options) {
 
     el.exit().remove();
 
+    if(!elShouldExist) return group;
+
     el.text(txt)
         // this is hacky, but convertToTspans uses the class
         // to determine whether to rotate mathJax...
@@ -169,9 +171,6 @@ function draw(gd, titleClass, options) {
         subtitleEl.text(subtitleTxt).attr('class', subtitleClass);
         subtitleEl.exit().remove();
     }
-
-
-    if(!elShouldExist) return group;
 
     function titleLayout(titleEl, subtitleEl) {
         Lib.syncOrAsync([drawTitle, scootTitle], { title: titleEl, subtitle: subtitleEl });
@@ -230,8 +229,8 @@ function draw(gd, titleClass, options) {
             shadow: fontShadow,
             lineposition: fontLineposition,
         })
-        .attr(attributes)
-            .call(svgTextUtils.convertToTspans, gd, adjustSubtitlePosition);
+        .attrs(attributes)
+        .each(function() { svgTextUtils.convertToTspans(d3.select(this), gd, adjustSubtitlePosition); });
 
         if(subtitleEl) {
             // Set subtitle y position based on bottom of title
@@ -259,7 +258,7 @@ function draw(gd, titleClass, options) {
                 shadow: subFontShadow,
                 lineposition: subFontLineposition,
             })
-            .attr(subtitleAttributes)
+            .attrs(subtitleAttributes)
                 .call(svgTextUtils.convertToTspans, gd);
         }
 
@@ -267,10 +266,8 @@ function draw(gd, titleClass, options) {
     }
 
     function scootTitle(titleAndSubtitleEls) {
-        var titleElIn = titleAndSubtitleEls.title;
-        var titleGroup = d3.select(titleElIn.node().parentNode);
-
         if(avoid && avoid.selection && avoid.side && txt) {
+            var titleElIn = titleAndSubtitleEls.title;
             var titleGroup = d3.select(titleElIn.node().parentNode);
 
             titleGroup.attr('transform', null);
