@@ -85,6 +85,7 @@ function notBlackListed(name) {
 
         // has contourcarpet See https://github.com/plotly/plotly.js/issues/5669
         'airfoil',
+        'h-colorbar_airfoil',
         'cheater',
         'cheater_constraint_greater_than',
         'cheater_constraint_greater_than_with_hill',
@@ -151,6 +152,8 @@ function notBlackListed(name) {
         'error_bar_style',
         'fake_violins',
         'fonts',
+        'font-variant-bar',
+        'font-weight-bar',
         'geo_africa-insets',
         'gl2d_10',
         'gl2d_12',
@@ -216,6 +219,7 @@ function notBlackListed(name) {
         'pattern_bars',
         'pattern_fgcolor_overlay_fillmode',
         'pattern_with_colorscale',
+        'petrophysics',
         'plot_types',
         'polar_blank',
         'polar_dates',

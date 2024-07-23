@@ -15,8 +15,9 @@ var getBinSpanLabelRound = require('./bin_label_vals');
 function calc(gd, trace) {
     var pos = [];
     var size = [];
-    var pa = Axes.getFromId(gd, trace.orientation === 'h' ? trace.yaxis : trace.xaxis);
-    var mainData = trace.orientation === 'h' ? 'y' : 'x';
+    var isHorizontal = trace.orientation === 'h';
+    var pa = Axes.getFromId(gd, isHorizontal ? trace.yaxis : trace.xaxis);
+    var mainData = isHorizontal ? 'y' : 'x';
     var counterData = {x: 'y', y: 'x'}[mainData];
     var calendar = trace[mainData + 'calendar'];
     var cumulativeSpec = trace.cumulative;
@@ -307,8 +308,10 @@ function calcAllAutoBins(gd, trace, pa, mainData, _overlayEdgeCase) {
 
         // Edge case: single-valued histogram overlaying others
         // Use them all together to calculate the bin size for the single-valued one
+        // Don't re-calculate bin width if user manually specified it (checing in bingroup=='' or xbins is defined)
         if(isOverlay && !Registry.traceIs(trace, '2dMap') && newBinSpec._dataSpan === 0 &&
-            pa.type !== 'category' && pa.type !== 'multicategory') {
+        pa.type !== 'category' && pa.type !== 'multicategory' &&
+        trace.bingroup === '' && (typeof trace.xbins === 'undefined')) {
             // Several single-valued histograms! Stop infinite recursion,
             // just return an extra flag that tells handleSingleValueOverlays
             // to sort out this trace too

@@ -3,13 +3,18 @@ var prependFile = require('prepend-file');
 
 var constants = require('./util/constants');
 var common = require('./util/common');
-var _bundle = require('./util/browserify_wrapper');
+var _bundle = require('./util/bundle_wrapper');
 
 var header = constants.licenseDist + '\n';
 var pathToPlotlyDist = constants.pathToPlotlyDist;
 var pathToPlotlyIndex = constants.pathToPlotlyIndex;
 var pathToPlotlyDistMin = constants.pathToPlotlyDistMin;
 var pathToPlotlyDistWithMeta = constants.pathToPlotlyDistWithMeta;
+
+var pathToPlotlyStrict = constants.pathToPlotlyStrict;
+var pathToPlotlyStrictDist = constants.pathToPlotlyStrictDist;
+var pathToPlotlyStrictDistMin = constants.pathToPlotlyStrictDistMin;
+
 var pathToPlotlyGeoAssetsSrc = constants.pathToPlotlyGeoAssetsSrc;
 var pathToPlotlyGeoAssetsDist = constants.pathToPlotlyGeoAssetsDist;
 
@@ -26,37 +31,47 @@ if(!doesFileExist(constants.pathToCSSBuild)) {
 // memory consumption.
 var tasks = [];
 
-// Browserify plotly.js
+// Bundle plotly.js
 tasks.push(function(done) {
     _bundle(pathToPlotlyIndex, pathToPlotlyDist, {
-        standalone: 'Plotly',
         pathToMinBundle: pathToPlotlyDistMin
     }, function() {
-        prependFile(pathToPlotlyDist, header, common.throwOnError);
-        prependFile(pathToPlotlyDistMin, header, common.throwOnError);
+        prependFile.sync(pathToPlotlyDist, header, common.throwOnError);
+        prependFile.sync(pathToPlotlyDistMin, header, common.throwOnError);
 
         done();
     });
 });
 
-// Browserify the geo assets
+// Bundle plotly.js-strict
+tasks.push(function(done) {
+    _bundle(pathToPlotlyStrict, pathToPlotlyStrictDist, {
+        pathToMinBundle: pathToPlotlyStrictDistMin
+    }, function() {
+        prependFile.sync(pathToPlotlyStrictDist, header.replace('plotly.js', 'plotly.js (strict)'), common.throwOnError);
+        prependFile.sync(pathToPlotlyStrictDistMin, header.replace('plotly.js', 'plotly.js (strict - minified)'), common.throwOnError);
+
+        done();
+    });
+});
+
+// Bundle the geo assets
 tasks.push(function(done) {
     _bundle(pathToPlotlyGeoAssetsSrc, pathToPlotlyGeoAssetsDist, {
         standalone: 'PlotlyGeoAssets'
     }, function() {
-        prependFile(pathToPlotlyGeoAssetsDist, header, common.throwOnError);
+        prependFile.sync(pathToPlotlyGeoAssetsDist, header, common.throwOnError);
 
         done();
     });
 });
 
-// Browserify plotly.js with meta
+// Bundle plotly.js with meta
 tasks.push(function(done) {
     _bundle(pathToPlotlyIndex, pathToPlotlyDistWithMeta, {
-        standalone: 'Plotly',
         noCompress: true
     }, function() {
-        prependFile(pathToPlotlyDistWithMeta, header, common.throwOnError);
+        prependFile.sync(pathToPlotlyDistWithMeta, header, common.throwOnError);
 
         done();
     });

@@ -11,7 +11,7 @@ var resizeText = require('../bar/uniform_text').resizeText;
 var styleTextPoints = barStyle.styleTextPoints;
 
 function style(gd, cd, sel) {
-    var s = sel ? sel : d3.select(gd).selectAll('g.waterfalllayer').selectAll('g.trace');
+    var s = sel ? sel : d3.select(gd).selectAll('g[class^="waterfalllayer"]').selectAll('g.trace');
     resizeText(gd, s, 'waterfall');
 
     s.style('opacity', function(d) { return getTraceFromCd(d).opacity; });

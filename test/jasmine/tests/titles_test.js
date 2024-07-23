@@ -1,11 +1,11 @@
 var d3Select = require('../../strict-d3').select;
 var d3SelectAll = require('../../strict-d3').selectAll;
 
-var Plotly = require('@lib/index');
-var alignmentConstants = require('@src/constants/alignment');
-var interactConstants = require('@src/constants/interactions');
-var Lib = require('@src/lib');
-var rgb = require('@src/components/color').rgb;
+var Plotly = require('../../../lib/index');
+var alignmentConstants = require('../../../src/constants/alignment');
+var interactConstants = require('../../../src/constants/interactions');
+var Lib = require('../../../src/lib');
+var rgb = require('../../../src/components/color').rgb;
 
 var createGraphDiv = require('../assets/create_graph_div');
 var destroyGraphDiv = require('../assets/destroy_graph_div');
@@ -641,7 +641,7 @@ describe('Titles can be updated', function() {
             desc: 'despite passing title only as a string using string attributes ' +
             '(backwards-compatibility)',
             update: {
-                'title': NEW_TITLE,
+                title: NEW_TITLE,
                 'xaxis.title': NEW_XTITLE,
                 'yaxis.title': NEW_YTITLE
             }
@@ -944,7 +944,7 @@ describe('Title fonts can be updated', function() {
             desc: 'despite using string attributes replacing deprecated `titlefont` attributes ' +
             '(backwards-compatibility)',
             update: {
-                'titlefont': NEW_TITLE_FONT,
+                titlefont: NEW_TITLE_FONT,
                 'xaxis.titlefont': NEW_XTITLE_FONT,
                 'yaxis.titlefont': NEW_YTITLE_FONT
             }
@@ -1063,6 +1063,119 @@ describe('Titles for multiple axes', function() {
             expect(y2Style.fontSize).toBe('5px');
         })
         .then(done, done.fail);
+    });
+});
+
+// TODO: Add in tests for interactions with other automargined elements
+describe('Title automargining', function() {
+    'use strict';
+
+    var data = [{x: [1, 1, 3], y: [1, 2, 3]}];
+    var gd;
+
+    beforeEach(function() {
+        gd = createGraphDiv();
+    });
+
+    afterEach(destroyGraphDiv);
+
+    it('should avoid overlap with container for yref=paper and allow padding', function(done) {
+        Plotly.newPlot(gd, data, {
+            margin: {t: 0, b: 0, l: 0, r: 0},
+            height: 300,
+            width: 400,
+            title: {
+                text: 'Basic title',
+                font: {size: 24},
+                yref: 'paper'
+            }
+        }).then(function() {
+            expect(gd._fullLayout._size.t).toBe(0);
+            expect(gd._fullLayout._size.h).toBe(300);
+            return Plotly.relayout(gd, 'title.automargin', true);
+        }).then(function() {
+            expect(gd._fullLayout.title.automargin).toBe(true);
+            expect(gd._fullLayout.title.y).toBe(1);
+            expect(gd._fullLayout.title.yanchor).toBe('bottom');
+            expect(gd._fullLayout._size.t).toBeCloseTo(27, -1);
+            expect(gd._fullLayout._size.h).toBeCloseTo(273, -1);
+            return Plotly.relayout(gd, 'title.pad.t', 10);
+        }).then(function() {
+            expect(gd._fullLayout._size.t).toBeCloseTo(37, -1);
+            expect(gd._fullLayout._size.h).toBeCloseTo(263, -1);
+            return Plotly.relayout(gd, 'title.pad.b', 10);
+        }).then(function() {
+            expect(gd._fullLayout._size.h).toBeCloseTo(253, -1);
+            expect(gd._fullLayout._size.t).toBeCloseTo(47, -1);
+            return Plotly.relayout(gd, 'title.yanchor', 'top');
+        }).then(function() {
+            expect(gd._fullLayout._size.t).toBe(0);
+        }).then(done, done.fail);
+    });
+
+
+    it('should automargin and position title at the bottom of the plot if title.y=0', function(done) {
+        Plotly.newPlot(gd, data, {
+            margin: {t: 0, b: 0, l: 0, r: 0},
+            height: 300,
+            width: 400,
+            title: {
+                text: 'Basic title',
+                font: {size: 24},
+                yref: 'paper'
+            }
+        }).then(function() {
+            return Plotly.relayout(gd, {'title.automargin': true, 'title.y': 0});
+        }).then(function() {
+            expect(gd._fullLayout._size.b).toBeCloseTo(27, -1);
+            expect(gd._fullLayout._size.h).toBeCloseTo(273, -1);
+            expect(gd._fullLayout.title.yanchor).toBe('top');
+        }).then(done, done.fail);
+    });
+
+    it('should avoid overlap with container and plot area for yref=container and allow padding', function(done) {
+        Plotly.newPlot(gd, data, {
+            margin: {t: 0, b: 0, l: 0, r: 0},
+            height: 300,
+            width: 400,
+            title: {
+                text: 'Basic title',
+                font: {size: 24},
+                yref: 'container',
+                automargin: true
+            }
+        }).then(function() {
+            expect(gd._fullLayout._size.t).toBeCloseTo(27, -1);
+            expect(gd._fullLayout._size.h).toBeCloseTo(273, -1);
+            expect(gd._fullLayout.title.y).toBe(1);
+            expect(gd._fullLayout.title.yanchor).toBe('top');
+            return Plotly.relayout(gd, 'title.y', 0.6);
+        }).then(function() {
+            expect(gd._fullLayout._size.t).toBeCloseTo(147, -1);
+            expect(gd._fullLayout._size.h).toBeCloseTo(153, -1);
+        }).then(done, done.fail);
+    });
+
+    it('should make space for multiple container-referenced components on the same side of the plot', function(done) {
+        Plotly.newPlot(gd, data, {
+            margin: {t: 0, b: 0, l: 0, r: 0},
+            xaxis: {
+                automargin: true,
+                title: {text: 'x-axis title'}
+            },
+            height: 300,
+            width: 400,
+            title: {
+                text: 'Basic title',
+                font: {size: 24},
+                yref: 'container',
+                automargin: true,
+                y: 0
+            }
+        }).then(function() {
+            expect(gd._fullLayout._size.b).toBeCloseTo(57, -1);
+            expect(gd._fullLayout._size.h).toBeCloseTo(243, -1);
+        }).then(done, done.fail);
     });
 });
 
@@ -1199,8 +1312,8 @@ describe('Editable titles', function() {
         gd = createGraphDiv();
     });
 
-    function checkTitle(letter, text, opacityOut, opacityIn) {
-        var titleEl = d3Select('.' + letter + 'title');
+    function checkTitle(className, text, opacityOut, opacityIn) {
+        var titleEl = d3Select('.' + className);
         expect(titleEl.text()).toBe(text);
         expect(+(titleEl.node().style.opacity || 1)).toBe(opacityOut);
 
@@ -1215,6 +1328,7 @@ describe('Editable titles', function() {
             expect(+(titleEl.node().style.opacity || 1)).toBe(opacityIn);
 
             mouseEvent('mouseout', xCenter, yCenter);
+            console.log({ titleEl_opacity: titleEl.node().style.opacity, className: className });
             setTimeout(function() {
                 expect(+(titleEl.node().style.opacity || 1)).toBe(opacityOut);
                 done();
@@ -1224,14 +1338,15 @@ describe('Editable titles', function() {
         return promise;
     }
 
-    function editTitle(letter, attr, text) {
+    function editTitle(className, attr, text) {
         return new Promise(function(resolve) {
             gd.once('plotly_relayout', function(eventData) {
-                expect(eventData[attr]).toEqual(text, [letter, attr, eventData]);
+                expect(eventData[attr]).toEqual(text, [className, attr, eventData]);
+                console.log(eventData[attr]);
                 setTimeout(resolve, 10);
             });
 
-            var textNode = document.querySelector('.' + letter + 'title');
+            var textNode = document.querySelector('.' + className);
             textNode.dispatchEvent(new window.MouseEvent('click'));
 
             var editNode = document.querySelector('.plugin-editable.editable');
@@ -1246,13 +1361,14 @@ describe('Editable titles', function() {
         Plotly.newPlot(gd, data, {}, {editable: true})
         .then(function() {
             return Promise.all([
-                // Check all three titles in parallel. This only works because
+                // Check all four titles in parallel. This only works because
                 // we're using synthetic events, not a real mouse. It's a big
                 // win though because the test takes 1.2 seconds with the
                 // animations...
-                checkTitle('x', 'Click to enter X axis title', 0.2, 0.2),
-                checkTitle('y', 'Click to enter Y axis title', 0.2, 0.2),
-                checkTitle('g', 'Click to enter Plot title', 0.2, 0.2)
+                checkTitle('xtitle', 'Click to enter X axis title', 0.2, 0.2),
+                checkTitle('ytitle', 'Click to enter Y axis title', 0.2, 0.2),
+                checkTitle('gtitle', 'Click to enter Plot title', 0.2, 0.2),
+                checkTitle('gtitle-subtitle', 'Click to enter Plot subtitle', 0.2, 0.2)
             ]);
         })
         .then(done, done.fail);
@@ -1262,13 +1378,14 @@ describe('Editable titles', function() {
         Plotly.newPlot(gd, data, {
             xaxis: {title: {text: ''}},
             yaxis: {title: {text: ''}},
-            title: {text: ''}
+            title: { text: '', subtitle: { text: ''}},
         }, {editable: true})
         .then(function() {
             return Promise.all([
-                checkTitle('x', 'Click to enter X axis title', 0, 1),
-                checkTitle('y', 'Click to enter Y axis title', 0, 1),
-                checkTitle('g', 'Click to enter Plot title', 0, 1)
+                checkTitle('xtitle', 'Click to enter X axis title', 0, 1),
+                checkTitle('ytitle', 'Click to enter Y axis title', 0, 1),
+                checkTitle('gtitle', 'Click to enter Plot title', 0, 1),
+                checkTitle('gtitle-subtitle', 'Click to enter Plot subtitle', 0, 1)
             ]);
         })
         .then(done, done.fail);
@@ -1281,19 +1398,23 @@ describe('Editable titles', function() {
             title: {text: ''}
         }, {editable: true})
         .then(function() {
-            return editTitle('x', 'xaxis.title.text', 'XXX');
+            return editTitle('xtitle', 'xaxis.title.text', 'XXX');
         })
         .then(function() {
-            return editTitle('y', 'yaxis.title.text', 'YYY');
+            return editTitle('ytitle', 'yaxis.title.text', 'YYY');
         })
         .then(function() {
-            return editTitle('g', 'title.text', 'TTT');
+            return editTitle('gtitle', 'title.text', 'TTT');
+        })
+        .then(function() {
+            return editTitle('gtitle-subtitle', 'title.subtitle.text', 'SSS');
         })
         .then(function() {
             return Promise.all([
-                checkTitle('x', 'XXX', 1, 1),
-                checkTitle('y', 'YYY', 1, 1),
-                checkTitle('g', 'TTT', 1, 1)
+                checkTitle('xtitle', 'XXX', 1, 1),
+                checkTitle('ytitle', 'YYY', 1, 1),
+                checkTitle('gtitle', 'TTT', 1, 1),
+                checkTitle('gtitle-subtitle', 'SSS', 1, 1)
             ]);
         })
         .then(done, done.fail);

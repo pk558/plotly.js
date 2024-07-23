@@ -108,6 +108,7 @@
                     "tickwidth": 5,
                     "tickcolor": "blue",
                     "showticklabels": true,
+                    "ticklabelstep": 2,
                     "tickfont": {
                         "family": "Arial",
                         "size": 16,
@@ -148,6 +149,14 @@
         }
     ],
     "layout": {
+        "font": {
+            "weight": "bold",
+            "style": "italic",
+            "variant": "small-caps",
+            "textcase": "word caps",
+            "lineposition": "under",
+            "shadow": "auto"
+        },
         "width": 800,
         "height": 500
     }

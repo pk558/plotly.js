@@ -19,9 +19,9 @@ var Plots = require('../plots');
 var Axes = require('../cartesian/axes');
 var getAutoRange = require('../cartesian/autorange').getAutoRange;
 var dragElement = require('../../components/dragelement');
-var prepSelect = require('../cartesian/select').prepSelect;
-var clearSelect = require('../cartesian/select').clearSelect;
-var selectOnClick = require('../cartesian/select').selectOnClick;
+var prepSelect = require('../../components/selections').prepSelect;
+var clearOutline = require('../../components/selections').clearOutline;
+var selectOnClick = require('../../components/selections').selectOnClick;
 
 var createGeoZoom = require('./zoom');
 var constants = require('./constants');
@@ -68,8 +68,13 @@ module.exports = function createGeo(opts) {
     return new Geo(opts);
 };
 
-proto.plot = function(geoCalcData, fullLayout, promises) {
+proto.plot = function(geoCalcData, fullLayout, promises, replot) {
     var _this = this;
+    if(replot) return _this.update(geoCalcData, fullLayout, true);
+
+    _this._geoCalcData = geoCalcData;
+    _this._fullLayout = fullLayout;
+
     var geoLayout = fullLayout[this.id];
     var geoPromises = [];
 
@@ -80,12 +85,24 @@ proto.plot = function(geoCalcData, fullLayout, promises) {
             break;
         }
     }
+
+    var hasMarkerAngles = false;
     for(var i = 0; i < geoCalcData.length; i++) {
-        if(geoCalcData[0][0].trace.locationmode) {
+        var trace = geoCalcData[0][0].trace;
+        trace._geo = _this;
+
+        if(trace.locationmode) {
             needsTopojson = true;
-            break;
+        }
+
+        var marker = trace.marker;
+        if(marker) {
+            var angle = marker.angle;
+            var angleref = marker.angleref;
+            if(angle || angleref === 'north' || angleref === 'previous') hasMarkerAngles = true;
         }
     }
+    this._hasMarkerAngles = hasMarkerAngles;
 
     if(needsTopojson) {
         var topojsonNameNew = topojsonUtils.getTopojsonName(geoLayout);
@@ -120,7 +137,7 @@ proto.fetchTopojson = function() {
                 if(err.status === 404) {
                     return reject(new Error([
                         'plotly.js could not find topojson file at',
-                        topojsonPath, '.',
+                        topojsonPath + '.',
                         'Make sure the *topojsonURL* plot config option',
                         'is set properly.'
                     ].join(' ')));
@@ -138,7 +155,7 @@ proto.fetchTopojson = function() {
     });
 };
 
-proto.update = function(geoCalcData, fullLayout) {
+proto.update = function(geoCalcData, fullLayout, replot) {
     var geoLayout = fullLayout[this.id];
 
     // important: maps with choropleth traces have a different layer order
@@ -156,11 +173,13 @@ proto.update = function(geoCalcData, fullLayout) {
         }
     }
 
-    var hasInvalidBounds = this.updateProjection(geoCalcData, fullLayout);
-    if(hasInvalidBounds) return;
+    if(!replot) {
+        var hasInvalidBounds = this.updateProjection(geoCalcData, fullLayout);
+        if(hasInvalidBounds) return;
 
-    if(!this.viewInitial || this.scope !== geoLayout.scope) {
-        this.saveViewInitial(geoLayout);
+        if(!this.viewInitial || this.scope !== geoLayout.scope) {
+            this.saveViewInitial(geoLayout);
+        }
     }
     this.scope = geoLayout.scope;
 
@@ -178,7 +197,7 @@ proto.update = function(geoCalcData, fullLayout) {
     var choroplethLayer = this.layers.backplot.select('.choroplethlayer');
     this.dataPaths.choropleth = choroplethLayer.selectAll('path');
 
-    this.render();
+    this._render();
 };
 
 proto.updateProjection = function(geoCalcData, fullLayout) {
@@ -370,7 +389,7 @@ proto.updateBaseLayers = function(fullLayout, geoLayout) {
         } else if(isAxisLayer(d)) {
             path.datum(makeGraticule(d, geoLayout, fullLayout))
                 .call(Color.stroke, geoLayout[d].gridcolor)
-                .call(Drawing.dashLine, '', geoLayout[d].gridwidth);
+                .call(Drawing.dashLine, geoLayout[d].griddash, geoLayout[d].gridwidth);
         }
 
         if(isLineLayer(d)) {
@@ -432,22 +451,18 @@ proto.updateFx = function(fullLayout, geoLayout) {
         ]);
     }
 
-    var fillRangeItems;
-
-    if(dragMode === 'select') {
-        fillRangeItems = function(eventData, poly) {
+    var fillRangeItems = function(eventData, poly) {
+        if(poly.isRect) {
             var ranges = eventData.range = {};
             ranges[_this.id] = [
                 invert([poly.xmin, poly.ymin]),
                 invert([poly.xmax, poly.ymax])
             ];
-        };
-    } else if(dragMode === 'lasso') {
-        fillRangeItems = function(eventData, poly, pts) {
+        } else {
             var dataPts = eventData.lassoPoints = {};
-            dataPts[_this.id] = pts.filtered.map(invert);
-        };
-    }
+            dataPts[_this.id] = poly.map(invert);
+        }
+    };
 
     // Note: dragOptions is needed to be declared for all dragmodes because
     // it's the object that holds persistent selection state.
@@ -465,7 +480,7 @@ proto.updateFx = function(fullLayout, geoLayout) {
         subplot: _this.id,
         clickFn: function(numClicks) {
             if(numClicks === 2) {
-                clearSelect(gd);
+                clearOutline(gd);
             }
         }
     };
@@ -572,7 +587,7 @@ proto.saveViewInitial = function(geoLayout) {
     var rotation = projLayout.rotation || {};
 
     this.viewInitial = {
-        'fitbounds': geoLayout.fitbounds,
+        fitbounds: geoLayout.fitbounds,
         'projection.scale': projLayout.scale
     };
 
@@ -598,8 +613,16 @@ proto.saveViewInitial = function(geoLayout) {
     Lib.extendFlat(this.viewInitial, extra);
 };
 
+proto.render = function(mayRedrawOnUpdates) {
+    if(this._hasMarkerAngles && mayRedrawOnUpdates) {
+        this.plot(this._geoCalcData, this._fullLayout, [], true);
+    } else {
+        this._render();
+    }
+};
+
 // [hot code path] (re)draw all paths which depend on the projection
-proto.render = function() {
+proto._render = function() {
     var projection = this.projection;
     var pathFn = projection.getPath();
     var k;
@@ -626,7 +649,7 @@ proto.render = function() {
     for(k in this.dataPoints) {
         this.dataPoints[k]
             .attr('display', hideShowPoints)
-            .attr('transform', translatePoints);
+            .attr('transform', translatePoints); // TODO: need to redraw points with marker angle instead of calling translatePoints
     }
 };
 

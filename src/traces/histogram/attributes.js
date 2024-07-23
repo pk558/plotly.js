@@ -3,6 +3,8 @@
 var barAttrs = require('../bar/attributes');
 var axisHoverFormat = require('../../plots/cartesian/axis_format_attributes').axisHoverFormat;
 var hovertemplateAttrs = require('../../plots/template_attributes').hovertemplateAttrs;
+var texttemplateAttrs = require('../../plots/template_attributes').texttemplateAttrs;
+var fontAttrs = require('../../plots/font_attributes');
 var makeBinAttrs = require('./bin_attributes');
 var constants = require('./constants');
 var extendFlat = require('../../lib/extend').extendFlat;
@@ -198,6 +200,44 @@ module.exports = {
         keys: constants.eventDataKeys
     }),
 
+    texttemplate: texttemplateAttrs({
+        arrayOk: false,
+        editType: 'plot'
+    }, {
+        keys: ['label', 'value']
+    }),
+
+    textposition: extendFlat({}, barAttrs.textposition, {
+        arrayOk: false
+    }),
+
+    textfont: fontAttrs({
+        arrayOk: false,
+        editType: 'plot',
+        colorEditType: 'style',
+        description: 'Sets the text font.'
+    }),
+
+    outsidetextfont: fontAttrs({
+        arrayOk: false,
+        editType: 'plot',
+        colorEditType: 'style',
+        description: 'Sets the font used for `text` lying outside the bar.'
+    }),
+
+    insidetextfont: fontAttrs({
+        arrayOk: false,
+        editType: 'plot',
+        colorEditType: 'style',
+        description: 'Sets the font used for `text` lying inside the bar.'
+    }),
+
+    insidetextanchor: barAttrs.insidetextanchor,
+
+    textangle: barAttrs.textangle,
+    cliponaxis: barAttrs.cliponaxis,
+    constraintext: barAttrs.constraintext,
+
     marker: barAttrs.marker,
 
     offsetgroup: barAttrs.offsetgroup,
@@ -208,5 +248,7 @@ module.exports = {
 
     _deprecated: {
         bardir: barAttrs._deprecated.bardir
-    }
+    },
+
+    zorder: barAttrs.zorder
 };

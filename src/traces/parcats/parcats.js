@@ -11,6 +11,8 @@ var tinycolor = require('tinycolor2');
 var svgTextUtils = require('../../lib/svg_text_utils');
 
 function performPlot(parcatsModels, graphDiv, layout, svg) {
+    var isStatic = graphDiv._context.staticPlot;
+
     var viewModels = parcatsModels.map(createParcatsViewModel.bind(0, graphDiv, layout));
 
     // Get (potentially empty) parcatslayer selection with bound data to single element array
@@ -23,7 +25,7 @@ function performPlot(parcatsModels, graphDiv, layout, svg) {
 
     layerSelection
         .attr('class', 'parcatslayer')
-        .style('pointer-events', 'all');
+        .style('pointer-events', isStatic ? 'none' : 'all');
 
     // Bind data to children of layerSelection and get reference to traceSelection
     var traceSelection = layerSelection.selectAll('g.trace.parcats')
@@ -140,8 +142,6 @@ function performPlot(parcatsModels, graphDiv, layout, svg) {
         .attr('class', 'catlabel')
         .attr('pointer-events', 'none');
 
-    var paperColor = graphDiv._fullLayout.paper_bgcolor;
-
     // Update category label
     categorySelection.select('text.catlabel')
         .attr('text-anchor', function(d) {
@@ -154,8 +154,6 @@ function performPlot(parcatsModels, graphDiv, layout, svg) {
             }
         })
         .attr('alignment-baseline', 'middle')
-
-        .style('text-shadow', svgTextUtils.makeTextShadow(paperColor))
         .style('fill', 'rgb(0, 0, 0)')
         .attr('x', function(d) {
             if(catInRightDim(d)) {
@@ -818,7 +816,7 @@ function createHoverLabelForColorHovermode(gd, rootBBox, bandElement) {
     var pColorGivenCat = bandColorCount / catCount;
 
     var labels = {
-        countLabel: totalCount,
+        countLabel: bandColorCount,
         categoryLabel: catLabel,
         probabilityLabel: pColorAndCat.toFixed(3)
     };

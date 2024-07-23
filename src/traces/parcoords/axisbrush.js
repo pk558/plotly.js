@@ -354,9 +354,10 @@ function attachDragBehavior(selection) {
 
 function startAsc(a, b) { return a[0] - b[0]; }
 
-function renderAxisBrush(axisBrush, paperColor) {
-    var background = axisBrush.selectAll('.background')
-        .data(repeat)
+function renderAxisBrush(axisBrush, paperColor, gd) {
+    var isStatic = gd._context.staticPlot;
+
+    var background = axisBrush.selectAll('.background').data(repeat)
         .enter()
         .append('rect');
 
@@ -366,7 +367,7 @@ function renderAxisBrush(axisBrush, paperColor) {
         .classed('background', true)
         .call(barHorizontalSetup)
         .call(backgroundBarHorizontalSetup)
-        .style('pointer-events', 'auto') // parent pointer events are disabled; we must have it to register events
+        .style('pointer-events', isStatic ? 'none' : 'auto') // parent pointer events are disabled; we must have it to register events
         .attr('transform', strTranslate(0, c.verticalPadding));
 
     background
@@ -414,7 +415,7 @@ function renderAxisBrush(axisBrush, paperColor) {
         .call(styleHighlight);
 }
 
-function ensureAxisBrush(axisOverlays, paperColor) {
+function ensureAxisBrush(axisOverlays, paperColor, gd) {
     var axisBrush = axisOverlays.selectAll('.' + c.cn.axisBrush)
         .data(repeat, keyFun)
         .enter()
@@ -425,7 +426,7 @@ function ensureAxisBrush(axisOverlays, paperColor) {
     axisBrush
         .classed(c.cn.axisBrush, true);
 
-    renderAxisBrush(axisBrush, paperColor);
+    renderAxisBrush(axisBrush, paperColor, gd);
 }
 
 function getBrushExtent(brush) {

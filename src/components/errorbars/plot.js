@@ -17,6 +17,7 @@ module.exports = function plot(gd, traces, plotinfo, transitionOpts) {
     var ya = plotinfo.yaxis;
 
     var hasAnimation = transitionOpts && transitionOpts.duration > 0;
+    var isStatic = gd._context.staticPlot;
 
     traces.each(function(d) {
         var trace = getTraceFromCd(d);
@@ -91,7 +92,7 @@ module.exports = function plot(gd, traces, plotinfo, transitionOpts) {
 
                 if(isNew) {
                     yerror = errorbar.append('path')
-                        .style('vector-effect', 'non-scaling-stroke')
+                        .style('vector-effect', isStatic ? 'none' : 'non-scaling-stroke')
                         .classed('yerror', true);
                 } else if(hasAnimation) {
                     yerror = yerror
@@ -119,7 +120,7 @@ module.exports = function plot(gd, traces, plotinfo, transitionOpts) {
 
                 if(isNew) {
                     xerror = errorbar.append('path')
-                        .style('vector-effect', 'non-scaling-stroke')
+                        .style('vector-effect', isStatic ? 'none' : 'non-scaling-stroke')
                         .classed('xerror', true);
                 } else if(hasAnimation) {
                     xerror = xerror

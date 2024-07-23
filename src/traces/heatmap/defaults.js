@@ -3,6 +3,7 @@
 var Lib = require('../../lib');
 
 var handleXYZDefaults = require('./xyz_defaults');
+var handleHeatmapLabelDefaults = require('./label_defaults');
 var handlePeriodDefaults = require('../scatter/period_defaults');
 var handleStyleDefaults = require('./style_defaults');
 var colorscaleDefaults = require('../../components/colorscale/defaults');
@@ -28,10 +29,12 @@ module.exports = function supplyDefaults(traceIn, traceOut, defaultColor, layout
     coerce('hovertext');
     coerce('hovertemplate');
 
+    handleHeatmapLabelDefaults(coerce, layout);
     handleStyleDefaults(traceIn, traceOut, coerce, layout);
 
     coerce('hoverongaps');
     coerce('connectgaps', Lib.isArray1D(traceOut.z) && (traceOut.zsmooth !== false));
 
     colorscaleDefaults(traceIn, traceOut, layout, coerce, {prefix: '', cLetter: 'z'});
+    coerce('zorder');
 };

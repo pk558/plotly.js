@@ -9,14 +9,16 @@ var linePoints = require('../scatter/line_points');
 var helpers = require('./helpers');
 
 module.exports = function plot(gd, plotinfo, cdViolins, violinLayer) {
+    var isStatic = gd._context.staticPlot;
     var fullLayout = gd._fullLayout;
     var xa = plotinfo.xaxis;
     var ya = plotinfo.yaxis;
 
-    function makePath(pts) {
+    function makePath(pts, trace) {
         var segments = linePoints(pts, {
             xaxis: xa,
             yaxis: ya,
+            trace: trace,
             connectGaps: true,
             baseTolerance: 0.75,
             shape: 'spline',
@@ -45,15 +47,13 @@ module.exports = function plot(gd, plotinfo, cdViolins, violinLayer) {
         var hasPositiveSide = hasBothSides || trace.side === 'positive';
         var hasNegativeSide = hasBothSides || trace.side === 'negative';
 
-        var violins = plotGroup.selectAll('path.violin')
-            .data(Lib.identity)
-            .enter()
-            .append('path');
+        var violins = plotGroup.selectAll('path.violin').data(Lib.identity)
+            .enter().append('path');
 
         violins.exit().remove();
 
         violins
-            .style('vector-effect', 'non-scaling-stroke')
+            .style('vector-effect', isStatic ? 'none' : 'non-scaling-stroke')
             .attr('class', 'violin');
 
         violins.each(function(d) {
@@ -83,7 +83,7 @@ module.exports = function plot(gd, plotinfo, cdViolins, violinLayer) {
                     pt[t.posLetter] = posCenter + (density[i].v / scale);
                     pt[t.valLetter] = valAxis.c2l(density[i].t, true);
                 }
-                pathPos = makePath(pts);
+                pathPos = makePath(pts, trace);
             }
 
             if(hasNegativeSide) {
@@ -93,7 +93,7 @@ module.exports = function plot(gd, plotinfo, cdViolins, violinLayer) {
                     pt[t.posLetter] = posCenter - (density[i].v / scale);
                     pt[t.valLetter] = valAxis.c2l(density[i].t, true);
                 }
-                pathNeg = makePath(pts);
+                pathNeg = makePath(pts, trace);
             }
 
             if(hasBothSides) {
@@ -171,8 +171,8 @@ module.exports = function plot(gd, plotinfo, cdViolins, violinLayer) {
         meanPaths
             .attr('class', 'meanline')
             .style('fill', 'none')
-            .style('vector-effect', 'non-scaling-stroke');
-
+            .style('vector-effect', isStatic ? 'none' : 'non-scaling-stroke');
+        meanPaths.exit().remove();
         meanPaths.each(function(d) {
             var v = valAxis.c2p(d.mean, true);
             var p = helpers.getPositionOnKdePath(d, trace, v);

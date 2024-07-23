@@ -7,16 +7,12 @@ var overrideAll = require('../../plot_api/edit_types').overrideAll;
 
 
 module.exports = overrideAll({
-// TODO: only right is supported currently
-//     orient: {
-//         valType: 'enumerated',
-//         values: ['left', 'right', 'top', 'bottom'],
-//         dflt: 'right',
-//         description: [
-//             'Determines which side are the labels on',
-//             '(so left and right make vertical bars, etc.)'
-//         ].join(' ')
-//     },
+    orientation: {
+        valType: 'enumerated',
+        values: ['h', 'v'],
+        dflt: 'v',
+        description: 'Sets the orientation of the colorbar.'
+    },
     thicknessmode: {
         valType: 'enumerated',
         values: ['fraction', 'pixels'],
@@ -61,21 +57,36 @@ module.exports = overrideAll({
     },
     x: {
         valType: 'number',
-        dflt: 1.02,
-        min: -2,
-        max: 3,
         description: [
-            'Sets the x position of the color bar (in plot fraction).'
+            'Sets the x position with respect to `xref` of the color bar (in plot fraction).',
+            'When `xref` is *paper*, defaults to 1.02 when `orientation` is *v* and',
+            '0.5 when `orientation` is *h*.',
+            'When `xref` is *container*, defaults to *1* when `orientation` is *v* and',
+            '0.5 when `orientation` is *h*.',
+            'Must be between *0* and *1* if `xref` is *container*',
+            'and between *-2* and *3* if `xref` is *paper*.'
+        ].join(' ')
+    },
+    xref: {
+        valType: 'enumerated',
+        dflt: 'paper',
+        values: ['container', 'paper'],
+        editType: 'layoutstyle',
+        description: [
+            'Sets the container `x` refers to.',
+            '*container* spans the entire `width` of the plot.',
+            '*paper* refers to the width of the plotting area only.'
         ].join(' ')
     },
     xanchor: {
         valType: 'enumerated',
         values: ['left', 'center', 'right'],
-        dflt: 'left',
         description: [
             'Sets this color bar\'s horizontal position anchor.',
             'This anchor binds the `x` position to the *left*, *center*',
-            'or *right* of the color bar.'
+            'or *right* of the color bar.',
+            'Defaults to *left* when `orientation` is *v* and',
+            '*center* when `orientation` is *h*.'
         ].join(' ')
     },
     xpad: {
@@ -86,21 +97,36 @@ module.exports = overrideAll({
     },
     y: {
         valType: 'number',
-        dflt: 0.5,
-        min: -2,
-        max: 3,
         description: [
-            'Sets the y position of the color bar (in plot fraction).'
+            'Sets the y position with respect to `yref` of the color bar (in plot fraction).',
+            'When `yref` is *paper*, defaults to 0.5 when `orientation` is *v* and',
+            '1.02 when `orientation` is *h*.',
+            'When `yref` is *container*, defaults to 0.5 when `orientation` is *v* and',
+            '1 when `orientation` is *h*.',
+            'Must be between *0* and *1* if `yref` is *container*',
+            'and between *-2* and *3* if `yref` is *paper*.'
         ].join(' ')
+    },
+    yref: {
+        valType: 'enumerated',
+        dflt: 'paper',
+        values: ['container', 'paper'],
+        editType: 'layoutstyle',
+        description: [
+            'Sets the container `y` refers to.',
+            '*container* spans the entire `height` of the plot.',
+            '*paper* refers to the height of the plotting area only.'
+        ].join(' '),
     },
     yanchor: {
         valType: 'enumerated',
         values: ['top', 'middle', 'bottom'],
-        dflt: 'middle',
         description: [
             'Sets this color bar\'s vertical position anchor',
             'This anchor binds the `y` position to the *top*, *middle*',
-            'or *bottom* of the color bar.'
+            'or *bottom* of the color bar.',
+            'Defaults to *middle* when `orientation` is *v* and',
+            '*bottom* when `orientation` is *h*.'
         ].join(' ')
     },
     ypad: {
@@ -129,7 +155,7 @@ module.exports = overrideAll({
         description: 'Sets the color of padded area.'
     },
     // tick and title properties named and function exactly as in axes
-    tickmode: axesAttrs.tickmode,
+    tickmode: axesAttrs.minor.tickmode,
     nticks: axesAttrs.nticks,
     tick0: axesAttrs.tick0,
     dtick: axesAttrs.dtick,
@@ -143,22 +169,32 @@ module.exports = overrideAll({
             'In other cases the default is *hide past div*.'
         ].join(' ')
     }),
+
+    // ticklabelposition: not used directly, as values depend on orientation
+    // left/right options are for x axes, and top/bottom options are for y axes
     ticklabelposition: {
         valType: 'enumerated',
         values: [
             'outside', 'inside',
             'outside top', 'inside top',
+            'outside left', 'inside left',
+            'outside right', 'inside right',
             'outside bottom', 'inside bottom'
         ],
         dflt: 'outside',
         description: [
-            'Determines where tick labels are drawn.'
+            'Determines where tick labels are drawn relative to the ticks.',
+            'Left and right options are used when `orientation` is *h*,',
+            'top and bottom when `orientation` is *v*.'
         ].join(' ')
     },
+
     ticklen: axesAttrs.ticklen,
     tickwidth: axesAttrs.tickwidth,
     tickcolor: axesAttrs.tickcolor,
+    ticklabelstep: axesAttrs.ticklabelstep,
     showticklabels: axesAttrs.showticklabels,
+    labelalias: axesAttrs.labelalias,
     tickfont: fontAttrs({
         description: 'Sets the color bar\'s tick label font'
     }),
@@ -193,10 +229,11 @@ module.exports = overrideAll({
         side: {
             valType: 'enumerated',
             values: ['right', 'top', 'bottom'],
-            dflt: 'top',
             description: [
                 'Determines the location of color bar\'s title',
                 'with respect to the color bar.',
+                'Defaults to *top* when `orientation` if *v* and ',
+                'defaults to *right* when `orientation` if *h*.',
                 'Note that the title\'s location used to be set',
                 'by the now deprecated `titleside` attribute.'
             ].join(' ')

@@ -16,6 +16,15 @@ var layoutAttributes = require('./layout_attributes');
 var constants = require('./constants');
 var axisNames = constants.axisNames;
 
+var makeImagDflt = memoize(function(realTickvals) {
+    // TODO: handle this case outside supply defaults step
+    if(Lib.isTypedArray(realTickvals)) realTickvals = Array.from(realTickvals);
+
+    return realTickvals.slice().reverse().map(function(x) { return -x; })
+        .concat([0])
+        .concat(realTickvals);
+}, String);
+
 function handleDefaults(contIn, contOut, coerce, opts) {
     var bgColor = coerce('bgcolor');
     opts.bgColor = Color.combine(bgColor, opts.paper_bgcolor);
@@ -55,14 +64,16 @@ function handleDefaults(contIn, contOut, coerce, opts) {
             if(isRealAxis) {
                 coerceAxis('tickvals');
             } else {
-                var realTickvals = contOut.realaxis.tickvals || layoutAttributes.realaxis.tickvals.dflt;
-                var imagTickvalsDflt =
-                    realTickvals.slice().reverse().map(function(x) { return -x; })
-                    .concat([0])
-                    .concat(realTickvals);
+                var imagTickvalsDflt = makeImagDflt(
+                    contOut.realaxis.tickvals ||
+                    layoutAttributes.realaxis.tickvals.dflt
+                );
 
                 coerceAxis('tickvals', imagTickvalsDflt);
             }
+
+            // TODO: handle this case outside supply defaults step
+            if(Lib.isTypedArray(axOut.tickvals)) axOut.tickvals = Array.from(axOut.tickvals);
 
             var dfltColor;
             var dfltFontColor;
@@ -78,6 +89,10 @@ function handleDefaults(contIn, contOut, coerce, opts) {
             }
 
             handleTickLabelDefaults(axIn, axOut, coerceAxis, axOut.type, {
+                noAutotickangles: true,
+                noTicklabelshift: true,
+                noTicklabelstandoff: true,
+                noTicklabelstep: true,
                 noAng: !isRealAxis,
                 noExp: true,
                 font: {
@@ -132,3 +147,15 @@ module.exports = function supplyLayoutDefaults(layoutIn, layoutOut, fullData) {
         layoutOut: layoutOut
     });
 };
+
+function memoize(fn, keyFn) {
+    var cache = {};
+    return function(val) {
+        var newKey = keyFn ? keyFn(val) : val;
+        if(newKey in cache) { return cache[newKey]; }
+
+        var out = fn(val);
+        cache[newKey] = out;
+        return out;
+    };
+}

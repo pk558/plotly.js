@@ -42,6 +42,18 @@ module.exports = extendFlat({
     yhoverformat: axisHoverFormat('y'),
     zhoverformat: axisHoverFormat('z', 1),
     hovertemplate: heatmapAttrs.hovertemplate,
+    texttemplate: extendFlat({}, heatmapAttrs.texttemplate, {
+        description: [
+            'For this trace it only has an effect if `coloring` is set to *heatmap*.',
+            heatmapAttrs.texttemplate.description
+        ].join(' ')
+    }),
+    textfont: extendFlat({}, heatmapAttrs.textfont, {
+        description: [
+            'For this trace it only has an effect if `coloring` is set to *heatmap*.',
+            heatmapAttrs.textfont.description
+        ].join(' ')
+    }),
     hoverongaps: heatmapAttrs.hoverongaps,
     connectgaps: extendFlat({}, heatmapAttrs.connectgaps, {
         description: [
@@ -224,7 +236,7 @@ module.exports = extendFlat({
             ].join(' ')
         },
         editType: 'calc',
-        impliedEdits: {'autocontour': false}
+        impliedEdits: {autocontour: false}
     },
 
     line: {
@@ -253,7 +265,8 @@ module.exports = extendFlat({
             ].join(' ')
         }),
         editType: 'plot'
-    }
+    },
+    zorder: scatterAttrs.zorder
 },
     colorScaleAttrs('', {
         cLetter: 'z',

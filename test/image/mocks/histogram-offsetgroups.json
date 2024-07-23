@@ -58,6 +58,11 @@
     }
   ],
   "layout": {
+    "barcornerradius": "50%",
+    "uniformtext": {
+      "mode": "hide",
+      "minsize": 5
+    },
     "showlegend": false,
     "grid": {
       "rows": 2,

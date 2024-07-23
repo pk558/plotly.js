@@ -25,6 +25,8 @@ var positionTitleOutside = piePlot.positionTitleOutside;
 var formatSliceLabel = piePlot.formatSliceLabel;
 
 module.exports = function plot(gd, cdModule) {
+    var isStatic = gd._context.staticPlot;
+
     var fullLayout = gd._fullLayout;
 
     clearMinTextSize('funnelarea', fullLayout);
@@ -62,6 +64,15 @@ module.exports = function plot(gd, cdModule) {
 
                 var cx = cd0.cx;
                 var cy = cd0.cy;
+                var sliceTop = d3.select(this);
+                var slicePath = sliceTop.selectAll('path.surface').data([pt])
+                    .enter().append('path');
+
+                slicePath
+                    .classed('surface', true)
+                    .style({'pointer-events': isStatic ? 'none' : 'all'});
+
+                sliceTop.call(attachFxHandlers, gd, cd);
 
                 var shape =
                     'M' + (cx + pt.TR[0]) + ',' + (cy + pt.TR[1]) +
@@ -71,18 +82,30 @@ module.exports = function plot(gd, cdModule) {
                     'Z';
 
                 var sliceTop = d3.select(this);
-                var slicePath = sliceTop.selectAll('path.surface')
-                    .data([pt])
-                    .enter()
-                    .append('path');
+                var slicePath = sliceTop.selectAll('path.surface').data([pt])
+                    .enter().append('path');
 
                 slicePath.exit().remove();
 
                 slicePath
                     .classed('surface', true)
-                    .styles({'pointer-events': 'all'})
-                    .call(attachFxHandlers, gd, cd)
-                    .attr('d', shape);
+                    .style({'pointer-events': isStatic ? 'none' : 'all'});
+
+                sliceTop.call(attachFxHandlers, gd, cd);
+
+                var shape =
+                    'M' + (cx + pt.TR[0]) + ',' + (cy + pt.TR[1]) +
+                    line(pt.TR, pt.BR) +
+                    line(pt.BR, pt.BL) +
+                    line(pt.BL, pt.TL) +
+                    'Z';
+
+                slicePath.attr('d', shape);
+
+                var slicePath = sliceTop.selectAll('path.surface')
+                    .data([pt])
+                    .enter()
+                    .append('path');
 
                 // add text
                 formatSliceLabel(gd, pt, cd0);
@@ -109,7 +132,7 @@ module.exports = function plot(gd, cdModule) {
                     sliceText.text(pt.text)
                         .attrs({
                             'class': 'slicetext',
-                            transform: '',
+                            'transform': '',
                             'text-anchor': 'middle'
                         })
                         .call(Drawing.font, font)
@@ -137,7 +160,7 @@ module.exports = function plot(gd, cdModule) {
                     recordMinTextSize(trace.type, transform, fullLayout);
                     cd[i].transform = transform;
 
-                    sliceText.attr('transform', Lib.getTextTransform(transform));
+                    Lib.setTransormAndDisplay(sliceText, transform);
                 });
             });
 
@@ -166,7 +189,7 @@ module.exports = function plot(gd, cdModule) {
                 titleText.text(txt)
                     .attrs({
                         'class': 'titletext',
-                        transform: '',
+                        'transform': '',
                         'text-anchor': 'middle',
                     })
                 .call(Drawing.font, trace.title.font)

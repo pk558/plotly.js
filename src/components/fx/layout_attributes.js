@@ -2,12 +2,14 @@
 
 var constants = require('./constants');
 
-var fontAttrs = require('../../plots/font_attributes')({
+var fontAttrs = require('../../plots/font_attributes');
+
+var font = fontAttrs({
     editType: 'none',
     description: 'Sets the default hover label font used by all traces on the graph.'
 });
-fontAttrs.family.dflt = constants.HOVERFONT;
-fontAttrs.size.dflt = constants.HOVERFONTSIZE;
+font.family.dflt = constants.HOVERFONT;
+font.size.dflt = constants.HOVERFONTSIZE;
 
 module.exports = {
     clickmode: {
@@ -76,6 +78,19 @@ module.exports = {
             'If false, hover interactions are disabled.'
         ].join(' ')
     },
+    hoversubplots: {
+        valType: 'enumerated',
+        values: ['single', 'overlaying', 'axis'],
+        dflt: 'overlaying',
+        editType: 'none',
+        description: [
+            'Determines expansion of hover effects to other subplots',
+            'If *single* just the axis pair of the primary point is included without overlaying subplots.',
+            'If *overlaying* all subplots using the main axis and occupying the same space are included.',
+            'If *axis*, also include stacked subplots using the same axis',
+            'when `hovermode` is set to *x*, *x unified*, *y* or *y unified*.',
+        ].join(' ')
+    },
     hoverdistance: {
         valType: 'integer',
         min: -1,
@@ -118,7 +133,14 @@ module.exports = {
                 'Sets the border color of all hover labels on graph.'
             ].join(' ')
         },
-        font: fontAttrs,
+        font: font,
+        grouptitlefont: fontAttrs({
+            editType: 'none',
+            description: [
+                'Sets the font for group titles in hover (unified modes).',
+                'Defaults to `hoverlabel.font`.'
+            ].join(' ')
+        }),
         align: {
             valType: 'enumerated',
             values: ['left', 'right', 'auto'],
@@ -143,6 +165,7 @@ module.exports = {
                 '`namelength - 3` characters and add an ellipsis.'
             ].join(' ')
         },
+
         editType: 'none'
     },
     selectdirection: {

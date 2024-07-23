@@ -33,7 +33,7 @@ module.exports = function toSVG(gd, format, scale) {
     var toppaper = fullLayout._toppaper;
     var width = fullLayout.width;
     var height = fullLayout.height;
-    var i, k;
+    var i;
 
     // make background color a rect in the svg, then revert after scraping
     // all other alterations have been dealt with by properly preparing the svg
@@ -104,34 +104,37 @@ module.exports = function toSVG(gd, format, scale) {
             if(ff && ff.indexOf('"') !== -1) {
                 txt.style('font-family', ff.replace(DOUBLEQUOTE_REGEX, DUMMY_SUB));
             }
-        });
 
-    var queryParts = [];
-    if(fullLayout._gradientUrlQueryParts) {
-        for(k in fullLayout._gradientUrlQueryParts) queryParts.push(k);
-    }
-
-    if(fullLayout._patternUrlQueryParts) {
-        for(k in fullLayout._patternUrlQueryParts) queryParts.push(k);
-    }
-
-    if(queryParts.length) {
-        svg.selectAll(queryParts.join(',')).each(function() {
-            var pt = d3.select(this);
-
-            // similar to font family styles above,
-            // we must remove " after the SVG DOM has been serialized
-            var fill = this.style.fill;
-            if(fill && fill.indexOf('url(') !== -1) {
-                pt.style('fill', fill.replace(DOUBLEQUOTE_REGEX, DUMMY_SUB));
+            // Drop normal font-weight, font-style and font-variant to reduce the size
+            var fw = this.style.fontWeight;
+            if(fw && (fw === 'normal' || fw === '400')) { // font-weight 400 is similar to normal
+                txt.style('font-weight', undefined);
             }
-
-            var stroke = this.style.stroke;
-            if(stroke && stroke.indexOf('url(') !== -1) {
-                pt.style('stroke', stroke.replace(DOUBLEQUOTE_REGEX, DUMMY_SUB));
+            var fs = this.style.fontStyle;
+            if(fs && fs === 'normal') {
+                txt.style('font-style', undefined);
+            }
+            var fv = this.style.fontVariant;
+            if(fv && fv === 'normal') {
+                txt.style('font-variant', undefined);
             }
         });
-    }
+
+    svg.selectAll('.gradient_filled,.pattern_filled').each(function() {
+        var pt = d3.select(this);
+
+        // similar to font family styles above,
+        // we must remove " after the SVG DOM has been serialized
+        var fill = this.style.fill;
+        if(fill && fill.indexOf('url(') !== -1) {
+            pt.style('fill', fill.replace(DOUBLEQUOTE_REGEX, DUMMY_SUB));
+        }
+
+        var stroke = this.style.stroke;
+        if(stroke && stroke.indexOf('url(') !== -1) {
+            pt.style('stroke', stroke.replace(DOUBLEQUOTE_REGEX, DUMMY_SUB));
+        }
+    });
 
     if(format === 'pdf' || format === 'eps') {
         // these formats make the extra line MathJax adds around symbols look super thick in some cases

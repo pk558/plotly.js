@@ -4,9 +4,29 @@ var d3 = require('../../lib/d3');
 var tinycolor = require('tinycolor2');
 
 var Registry = require('../../registry');
+var Drawing = require('../../components/drawing');
+var Axes = require('../../plots/cartesian/axes');
 var Lib = require('../../lib');
+var svgTextUtils = require('../../lib/svg_text_utils');
+var formatLabels = require('../scatter/format_labels');
+var Color = require('../../components/color');
+var extractOpts = require('../../components/colorscale').extractOpts;
 var makeColorScaleFuncFromTrace = require('../../components/colorscale').makeColorScaleFuncFromTrace;
 var xmlnsNamespaces = require('../../constants/xmlns_namespaces');
+var alignmentConstants = require('../../constants/alignment');
+var LINE_SPACING = alignmentConstants.LINE_SPACING;
+var supportsPixelatedImage = require('../../lib/supports_pixelated_image');
+var PIXELATED_IMAGE_STYLE = require('../../constants/pixelated_image').STYLE;
+
+var labelClass = 'heatmap-label';
+
+function selectLabels(plotGroup) {
+    return plotGroup.selectAll('g.' + labelClass);
+}
+
+function removeLabels(plotGroup) {
+    selectLabels(plotGroup).remove();
+}
 
 module.exports = function(gd, plotinfo, cdheatmaps, heatmapLayer) {
     var xa = plotinfo.xaxis;
@@ -16,6 +36,8 @@ module.exports = function(gd, plotinfo, cdheatmaps, heatmapLayer) {
         var plotGroup = d3.select(this);
         var cd0 = cd[0];
         var trace = cd0.trace;
+        var xGap = trace.xgap || 0;
+        var yGap = trace.ygap || 0;
 
         var z = cd0.z;
         var x = cd0.x;
@@ -31,7 +53,7 @@ module.exports = function(gd, plotinfo, cdheatmaps, heatmapLayer) {
         var xrev = false;
         var yrev = false;
 
-        var left, right, temp, top, bottom, i;
+        var left, right, temp, top, bottom, i, j, k;
 
         // TODO: if there are multiple overlapping categorical heatmaps,
         // or if we allow category sorting, then the categories may not be
@@ -89,11 +111,18 @@ module.exports = function(gd, plotinfo, cdheatmaps, heatmapLayer) {
             y = cd0.yfill;
         }
 
+        var drawingMethod = 'default';
+        if(zsmooth) {
+            drawingMethod = zsmooth === 'best' ? 'smooth' : 'fast';
+        } else if(trace._islinear && xGap === 0 && yGap === 0 && supportsPixelatedImage()) {
+            drawingMethod = 'fast';
+        }
+
         // make an image that goes at most half a screen off either side, to keep
-        // time reasonable when you zoom in. if zsmooth is true/fast, don't worry
+        // time reasonable when you zoom in. if drawingMethod is fast, don't worry
         // about this, because zooming doesn't increase number of pixels
         // if zsmooth is best, don't include anything off screen because it takes too long
-        if(zsmooth !== 'fast') {
+        if(drawingMethod !== 'fast') {
             var extra = zsmooth === 'best' ? 0 : 0.5;
             left = Math.max(-extra * xa._length, left);
             right = Math.min((1 + extra) * xa._length, right);
@@ -107,18 +136,22 @@ module.exports = function(gd, plotinfo, cdheatmaps, heatmapLayer) {
         // setup image nodes
 
         // if image is entirely off-screen, don't even draw it
-        var isOffScreen = (imageWidth <= 0 || imageHeight <= 0);
+        var isOffScreen = (
+            left >= xa._length || right <= 0 || top >= ya._length || bottom <= 0
+        );
 
         if(isOffScreen) {
             var noImage = plotGroup.selectAll('image').data([]);
             noImage.exit().remove();
+
+            removeLabels(plotGroup);
             return;
         }
 
         // generate image data
 
         var canvasW, canvasH;
-        if(zsmooth === 'fast') {
+        if(drawingMethod === 'fast') {
             canvasW = n;
             canvasH = m;
         } else {
@@ -129,14 +162,14 @@ module.exports = function(gd, plotinfo, cdheatmaps, heatmapLayer) {
         var canvas = document.createElement('canvas');
         canvas.width = canvasW;
         canvas.height = canvasH;
-        var context = canvas.getContext('2d');
+        var context = canvas.getContext('2d', {willReadFrequently: true});
 
         var sclFunc = makeColorScaleFuncFromTrace(trace, {noNumericCheck: true, returnArray: true});
 
         // map brick boundaries to image pixels
         var xpx,
             ypx;
-        if(zsmooth === 'fast') {
+        if(drawingMethod === 'fast') {
             xpx = xrev ?
                 function(index) { return n - 1 - index; } :
                 Lib.identity;
@@ -167,7 +200,7 @@ module.exports = function(gd, plotinfo, cdheatmaps, heatmapLayer) {
         var gcount = 0;
         var bcount = 0;
 
-        var xb, j, xi, v, row, c;
+        var xb, xi, v, row, c;
 
         function setColor(v, pixsize) {
             if(v !== undefined) {
@@ -213,17 +246,17 @@ module.exports = function(gd, plotinfo, cdheatmaps, heatmapLayer) {
             return setColor(z00 + xinterp.frac * dx + yinterp.frac * (dy + xinterp.frac * dxy));
         }
 
-        if(zsmooth) { // best or fast, works fastest with imageData
+        if(drawingMethod !== 'default') { // works fastest with imageData
             var pxIndex = 0;
             var pixels;
 
             try {
-                pixels = new Uint8Array(imageWidth * imageHeight * 4);
+                pixels = new Uint8Array(canvasW * canvasH * 4);
             } catch(e) {
-                pixels = new Array(imageWidth * imageHeight * 4);
+                pixels = new Array(canvasW * canvasH * 4);
             }
 
-            if(zsmooth === 'best') {
+            if(drawingMethod === 'smooth') { // zsmooth="best"
                 var xForPx = xc || x;
                 var yForPx = yc || y;
                 var xPixArray = new Array(xForPx.length);
@@ -251,19 +284,19 @@ module.exports = function(gd, plotinfo, cdheatmaps, heatmapLayer) {
                         putColor(pixels, pxIndex, c);
                     }
                 }
-            } else { // zsmooth = fast
+            } else { // drawingMethod = "fast" (zsmooth = "fast"|false)
                 for(j = 0; j < m; j++) {
                     row = z[j];
                     yb = ypx(j);
-                    for(i = 0; i < imageWidth; i++) {
+                    for(i = 0; i < n; i++) {
                         c = setColor(row[i], 1);
-                        pxIndex = (yb * imageWidth + xpx(i)) * 4;
+                        pxIndex = (yb * n + xpx(i)) * 4;
                         putColor(pixels, pxIndex, c);
                     }
                 }
             }
 
-            var imageData = context.createImageData(imageWidth, imageHeight);
+            var imageData = context.createImageData(canvasW, canvasH);
             try {
                 imageData.data.set(pixels);
             } catch(e) {
@@ -275,11 +308,10 @@ module.exports = function(gd, plotinfo, cdheatmaps, heatmapLayer) {
             }
 
             context.putImageData(imageData, 0, 0);
-        } else { // zsmooth = false -> filling potentially large bricks works fastest with fillRect
+        } else { // rawingMethod = "default" (zsmooth = false)
+            // filling potentially large bricks works fastest with fillRect
             // gaps do not need to be exact integers, but if they *are* we will get
             // cleaner edges by rounding at least one edge
-            var xGap = trace.xgap;
-            var yGap = trace.ygap;
             var xGapLeft = Math.floor(xGap / 2);
             var yGapTop = Math.floor(yGap / 2);
 
@@ -332,6 +364,201 @@ module.exports = function(gd, plotinfo, cdheatmaps, heatmapLayer) {
             y: top,
             'xlink:href': canvas.toDataURL('image/png')
         });
+
+        if(drawingMethod === 'fast' && !zsmooth) {
+            image3.attr('style', PIXELATED_IMAGE_STYLE);
+        }
+
+        removeLabels(plotGroup);
+
+        var texttemplate = trace.texttemplate;
+        if(texttemplate) {
+            // dummy axis for formatting the z value
+            var cOpts = extractOpts(trace);
+            var dummyAx = {
+                type: 'linear',
+                range: [cOpts.min, cOpts.max],
+                _separators: xa._separators,
+                _numFormat: xa._numFormat
+            };
+
+            var aHistogram2dContour = trace.type === 'histogram2dcontour';
+            var aContour = trace.type === 'contour';
+            var iStart = aContour ? 1 : 0;
+            var iStop = aContour ? m - 1 : m;
+            var jStart = aContour ? 1 : 0;
+            var jStop = aContour ? n - 1 : n;
+
+            var textData = [];
+            for(i = iStart; i < iStop; i++) {
+                var yVal;
+                if(aContour) {
+                    yVal = cd0.y[i];
+                } else if(aHistogram2dContour) {
+                    if(i === 0 || i === m - 1) continue;
+                    yVal = cd0.y[i];
+                } else if(cd0.yCenter) {
+                    yVal = cd0.yCenter[i];
+                } else {
+                    if(i + 1 === m && cd0.y[i + 1] === undefined) continue;
+                    yVal = (cd0.y[i] + cd0.y[i + 1]) / 2;
+                }
+
+                var _y = Math.round(ya.c2p(yVal));
+                if(0 > _y || _y > ya._length) continue;
+
+                for(j = jStart; j < jStop; j++) {
+                    var xVal;
+                    if(aContour) {
+                        xVal = cd0.x[j];
+                    } else if(aHistogram2dContour) {
+                        if(j === 0 || j === n - 1) continue;
+                        xVal = cd0.x[j];
+                    } else if(cd0.xCenter) {
+                        xVal = cd0.xCenter[j];
+                    } else {
+                        if(j + 1 === n && cd0.x[j + 1] === undefined) continue;
+                        xVal = (cd0.x[j] + cd0.x[j + 1]) / 2;
+                    }
+
+                    var _x = Math.round(xa.c2p(xVal));
+                    if(0 > _x || _x > xa._length) continue;
+
+                    var obj = formatLabels({
+                        x: xVal,
+                        y: yVal
+                    }, trace, gd._fullLayout);
+
+                    obj.x = xVal;
+                    obj.y = yVal;
+
+                    var zVal = cd0.z[i][j];
+                    if(zVal === undefined) {
+                        obj.z = '';
+                        obj.zLabel = '';
+                    } else {
+                        obj.z = zVal;
+                        obj.zLabel = Axes.tickText(dummyAx, zVal, 'hover').text;
+                    }
+
+                    var theText = cd0.text && cd0.text[i] && cd0.text[i][j];
+                    if(theText === undefined || theText === false) theText = '';
+                    obj.text = theText;
+
+                    var _t = Lib.texttemplateString(texttemplate, obj, gd._fullLayout._d3locale, obj, trace._meta || {});
+                    if(!_t) continue;
+
+                    var lines = _t.split('<br>');
+                    var nL = lines.length;
+                    var nC = 0;
+                    for(k = 0; k < nL; k++) {
+                        nC = Math.max(nC, lines[k].length);
+                    }
+
+                    textData.push({
+                        l: nL, // number of lines
+                        c: nC, // maximum number of chars in a line
+                        t: _t, // text
+                        x: _x,
+                        y: _y,
+                        z: zVal
+                    });
+                }
+            }
+
+            var font = trace.textfont;
+            var fontSize = font.size;
+            var globalFontSize = gd._fullLayout.font.size;
+
+            if(!fontSize || fontSize === 'auto') {
+                var minW = Infinity;
+                var minH = Infinity;
+                var maxL = 0;
+                var maxC = 0;
+
+                for(k = 0; k < textData.length; k++) {
+                    var d = textData[k];
+                    maxL = Math.max(maxL, d.l);
+                    maxC = Math.max(maxC, d.c);
+
+                    if(k < textData.length - 1) {
+                        var nextD = textData[k + 1];
+                        var dx = Math.abs(nextD.x - d.x);
+                        var dy = Math.abs(nextD.y - d.y);
+
+                        if(dx) minW = Math.min(minW, dx);
+                        if(dy) minH = Math.min(minH, dy);
+                    }
+                }
+
+                if(
+                    !isFinite(minW) ||
+                    !isFinite(minH)
+                ) {
+                    fontSize = globalFontSize;
+                } else {
+                    minW -= xGap;
+                    minH -= yGap;
+
+                    minW /= maxC;
+                    minH /= maxL;
+
+                    minW /= LINE_SPACING / 2;
+                    minH /= LINE_SPACING;
+
+                    fontSize = Math.min(
+                        Math.floor(minW),
+                        Math.floor(minH),
+                        globalFontSize
+                    );
+                }
+            }
+            if(fontSize <= 0 || !isFinite(fontSize)) return;
+
+            var xFn = function(d) { return d.x; };
+            var yFn = function(d) {
+                return d.y - fontSize * ((d.l * LINE_SPACING) / 2 - 1);
+            };
+
+            var labels = selectLabels(plotGroup).data(textData);
+
+            labels
+                .enter()
+                .append('g')
+                .classed(labelClass, 1)
+                .append('text')
+                .attr('text-anchor', 'middle')
+                .each(function(d) {
+                    var thisLabel = d3.select(this);
+
+                    var fontColor = font.color;
+                    if(!fontColor || fontColor === 'auto') {
+                        fontColor = Color.contrast(
+                            d.z === undefined ? gd._fullLayout.plot_bgcolor :
+                            'rgba(' +
+                                sclFunc(d.z).join() +
+                            ')'
+                        );
+                    }
+
+                    thisLabel
+                        .attr('data-notex', 1)
+                        .call(svgTextUtils.positionText, xFn(d), yFn(d))
+                        .call(Drawing.font, {
+                            family: font.family,
+                            size: fontSize,
+                            color: fontColor,
+                            weight: font.weight,
+                            style: font.style,
+                            variant: font.variant,
+                            textcase: font.textcase,
+                            lineposition: font.lineposition,
+                            shadow: font.shadow,
+                        })
+                        .text(d.t)
+                        .call(svgTextUtils.convertToTspans, gd);
+                });
+        }
     });
 };
 

@@ -15,7 +15,7 @@ var attributeOutsideTextFont = attributes.outsidetextfont;
 var helpers = require('./helpers');
 
 function style(gd) {
-    var s = d3.select(gd).selectAll('g.barlayer').selectAll('g.trace');
+    var s = d3.select(gd).selectAll('g[class^="barlayer"]').selectAll('g.trace');
     resizeText(gd, s, 'bar');
 
     var barcount = s.size();
@@ -124,7 +124,13 @@ function getInsideTextFont(trace, index, layoutFont, barColor) {
         defaultFont = {
             color: Color.contrast(barColor),
             family: defaultFont.family,
-            size: defaultFont.size
+            size: defaultFont.size,
+            weight: defaultFont.weight,
+            style: defaultFont.style,
+            variant: defaultFont.variant,
+            textcase: defaultFont.textcase,
+            lineposition: defaultFont.lineposition,
+            shadow: defaultFont.shadow,
         };
     }
 
@@ -144,6 +150,12 @@ function getFontValue(attributeDefinition, attributeValue, index, defaultValue) 
     var familyValue = helpers.getValue(attributeValue.family, index);
     var sizeValue = helpers.getValue(attributeValue.size, index);
     var colorValue = helpers.getValue(attributeValue.color, index);
+    var weightValue = helpers.getValue(attributeValue.weight, index);
+    var styleValue = helpers.getValue(attributeValue.style, index);
+    var variantValue = helpers.getValue(attributeValue.variant, index);
+    var textcaseValue = helpers.getValue(attributeValue.textcase, index);
+    var linepositionValue = helpers.getValue(attributeValue.lineposition, index);
+    var shadowValue = helpers.getValue(attributeValue.shadow, index);
 
     return {
         family: helpers.coerceString(
@@ -151,7 +163,19 @@ function getFontValue(attributeDefinition, attributeValue, index, defaultValue) 
         size: helpers.coerceNumber(
           attributeDefinition.size, sizeValue, defaultValue.size),
         color: helpers.coerceColor(
-          attributeDefinition.color, colorValue, defaultValue.color)
+          attributeDefinition.color, colorValue, defaultValue.color),
+        weight: helpers.coerceString(
+            attributeDefinition.weight, weightValue, defaultValue.weight),
+        style: helpers.coerceString(
+            attributeDefinition.style, styleValue, defaultValue.style),
+        variant: helpers.coerceString(
+            attributeDefinition.variant, variantValue, defaultValue.variant),
+        textcase: helpers.coerceString(
+            attributeDefinition.variant, textcaseValue, defaultValue.textcase),
+        lineposition: helpers.coerceString(
+            attributeDefinition.variant, linepositionValue, defaultValue.lineposition),
+        shadow: helpers.coerceString(
+            attributeDefinition.variant, shadowValue, defaultValue.shadow),
     };
 }
 

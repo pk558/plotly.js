@@ -8,6 +8,7 @@ var Drawing = require('../../components/drawing');
 var helpers = require('../../plots/polar/helpers');
 
 module.exports = function plot(gd, subplot, cdbar) {
+    var isStatic = gd._context.staticPlot;
     var xa = subplot.xaxis;
     var ya = subplot.yaxis;
     var radialAxis = subplot.radialAxis;
@@ -26,7 +27,7 @@ module.exports = function plot(gd, subplot, cdbar) {
         bars.exit().remove();
 
         bars
-            .style('vector-effect', 'non-scaling-stroke')
+            .style('vector-effect', isStatic ? 'none' : 'non-scaling-stroke')
             .style('stroke-miterlimit', 2)
             .classed('point', true);
 

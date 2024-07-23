@@ -1,6 +1,6 @@
-var Plotly = require('@lib/index');
-var Plots = require('@src/plots/plots');
-var Lib = require('@src/lib');
+var Plotly = require('../../../lib/index');
+var Plots = require('../../../src/plots/plots');
+var Lib = require('../../../src/lib');
 
 var d3Select = require('../../strict-d3').select;
 var createGraphDiv = require('../assets/create_graph_div');
@@ -385,6 +385,12 @@ describe('config argument', function() {
             .then(done, done.fail);
         });
 
+        it('should make subtitles editable', function(done) {
+            initPlot('titleText')
+            .then(checkIfEditable('gtitle-subtitle', 'Click to enter Plot subtitle'))
+            .then(done, done.fail);
+        });
+
         it('should make x axes labels editable', function(done) {
             initPlot('axisTitleText')
             .then(checkIfEditable('g-xtitle', 'Click to enter X axis title'))
@@ -429,7 +435,7 @@ describe('config argument', function() {
     });
 
     describe('axis drag handles attribute', function() {
-        var mock = require('@mocks/14.json');
+        var mock = require('../../image/mocks/14.json');
 
         var gd;
         var mockCopy;
@@ -468,7 +474,7 @@ describe('config argument', function() {
     });
 
     describe('axis range entry attribute', function() {
-        var mock = require('@mocks/14.json');
+        var mock = require('../../image/mocks/14.json');
 
         var gd, mockCopy;
 

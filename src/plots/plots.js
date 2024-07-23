@@ -4,6 +4,7 @@ var d3 = require('../lib/d3');
 var timeFormatLocale = require('d3-time-format').timeFormatLocale;
 var formatLocale = require('d3-format').formatLocale;
 var isNumeric = require('fast-isnumeric');
+var b64encode = require('base64-arraybuffer');
 
 var Registry = require('../registry');
 var PlotSchema = require('../plot_api/plot_schema');
@@ -13,7 +14,8 @@ var Color = require('../components/color');
 var BADNUM = require('../constants/numerical').BADNUM;
 
 var axisIDs = require('./cartesian/axis_ids');
-var clearSelect = require('./cartesian/handle_outline').clearSelect;
+var clearOutline = require('../components/shapes/handle_outline').clearOutline;
+var scatterAttrs = require('../traces/scatter/layout_attributes');
 
 var animationAttrs = require('./animation_attributes');
 var frameAttrs = require('./frame_attributes');
@@ -32,9 +34,6 @@ plots.attributes = require('./attributes');
 plots.attributes.type.values = plots.allTypes;
 plots.fontAttrs = require('./font_attributes');
 plots.layoutAttributes = require('./layout_attributes');
-
-// TODO make this a plot attribute?
-plots.fontWeight = 'normal';
 
 var transformsRegistry = plots.transformsRegistry;
 
@@ -132,7 +131,7 @@ plots.addLinks = function(gd) {
         s.styles({
             'font-family': '"Open Sans", Arial, sans-serif',
             'font-size': '12px',
-            'fill': Color.defaultLine,
+            fill: Color.defaultLine,
             'pointer-events': 'all'
         })
         .each(function() {
@@ -184,7 +183,7 @@ function positionPlayWithData(gd, container) {
     var link = container.append('a')
         .attrs({
             'xlink:xlink:href': '#',
-            'class': 'link--impt link--embedview',
+            class: 'link--impt link--embedview',
             'font-weight': 'bold'
         })
         .text(gd._context.linkText + ' ' + String.fromCharCode(187));
@@ -317,6 +316,7 @@ plots.supplyDefaults = function(gd, opts) {
     // When editable=false the two behave the same, no title is drawn.
     newFullLayout._dfltTitle = {
         plot: _(gd, 'Click to enter Plot title'),
+        subtitle: _(gd, 'Click to enter Plot subtitle'),
         x: _(gd, 'Click to enter X axis title'),
         y: _(gd, 'Click to enter Y axis title'),
         colorbar: _(gd, 'Click to enter Colorscale title'),
@@ -481,7 +481,7 @@ plots.supplyDefaults = function(gd, opts) {
     // we should try to come up with a better solution when implementing
     // https://github.com/plotly/plotly.js/issues/1851
     if(oldFullLayout._zoomlayer && !gd._dragging) {
-        clearSelect({ // mock old gd
+        clearOutline({ // mock old gd
             _fullLayout: oldFullLayout
         });
     }
@@ -1320,14 +1320,10 @@ plots.supplyTraceDefaults = function(traceIn, traceOut, colorIndex, layout, trac
                 'showlegend'
             );
 
+            coerce('legend');
+            coerce('legendwidth');
             coerce('legendgroup');
-            var titleText = coerce('legendgrouptitle.text');
-            if(titleText) {
-                Lib.coerceFont(coerce, 'legendgrouptitle.font', Lib.extendFlat({}, layout.font, {
-                    size: Math.round(layout.font.size * 1.1) // default to larger font size
-                }));
-            }
-
+            coerce('legendgrouptitle.text');
             coerce('legendrank');
 
             traceOut._dfltShowLegend = true;
@@ -1359,7 +1355,10 @@ plots.supplyTraceDefaults = function(traceIn, traceOut, colorIndex, layout, trac
         }
 
         if(_module && _module.selectPoints) {
-            coerce('selectedpoints');
+            var selectedpoints = coerce('selectedpoints');
+            if(Lib.isTypedArray(selectedpoints)) {
+                traceOut.selectedpoints = Array.from(selectedpoints);
+            }
         }
 
         plots.supplyTransformDefaults(traceIn, traceOut, layout);
@@ -1475,26 +1474,57 @@ plots.supplyLayoutGlobalDefaults = function(layoutIn, layoutOut, formatObj) {
 
     coerce('autotypenumbers');
 
-    var globalFont = Lib.coerceFont(coerce, 'font');
+    var font = Lib.coerceFont(coerce, 'font');
+    var fontSize = font.size;
+
+    Lib.coerceFont(coerce, 'title.font', font, { overrideDflt: {
+        size: Math.round(fontSize * 1.4)
+    }});
 
     coerce('title.text', layoutOut._dfltTitle.plot);
-
-    Lib.coerceFont(coerce, 'title.font', {
-        family: globalFont.family,
-        size: Math.round(globalFont.size * 1.4),
-        color: globalFont.color
-    });
-
     coerce('title.xref');
-    coerce('title.yref');
-    coerce('title.x');
-    coerce('title.y');
-    coerce('title.xanchor');
-    coerce('title.yanchor');
+    var titleYref = coerce('title.yref');
     coerce('title.pad.t');
     coerce('title.pad.r');
     coerce('title.pad.b');
     coerce('title.pad.l');
+    var titleAutomargin = coerce('title.automargin');
+
+    coerce('title.x');
+    coerce('title.xanchor');
+    coerce('title.y');
+    coerce('title.yanchor');
+
+    coerce('title.subtitle.text', layoutOut._dfltTitle.subtitle);
+    Lib.coerceFont(coerce, 'title.subtitle.font', font, {
+        overrideDflt: {
+            size: Math.round(layoutOut.title.font.size * 0.7)
+        }
+    });
+
+    if(titleAutomargin) {
+        // when automargin=true
+        // title.y is 1 or 0 if paper ref
+        // 'auto' is not supported for either title.y or title.yanchor
+
+        // TODO: mention this smart default in the title.y and title.yanchor descriptions
+
+        if(titleYref === 'paper') {
+            if(layoutOut.title.y !== 0) layoutOut.title.y = 1;
+
+            if(layoutOut.title.yanchor === 'auto') {
+                layoutOut.title.yanchor = layoutOut.title.y === 0 ? 'top' : 'bottom';
+            }
+        }
+
+        if(titleYref === 'container') {
+            if(layoutOut.title.y === 'auto') layoutOut.title.y = 1;
+
+            if(layoutOut.title.yanchor === 'auto') {
+                layoutOut.title.yanchor = layoutOut.title.y < 0.5 ? 'bottom' : 'top';
+            }
+        }
+    }
 
     var uniformtextMode = coerce('uniformtext.mode');
     if(uniformtextMode) {
@@ -1514,6 +1544,9 @@ plots.supplyLayoutGlobalDefaults = function(layoutIn, layoutOut, formatObj) {
 
     coerce('width');
     coerce('height');
+    coerce('minreducedwidth');
+    coerce('minreducedheight');
+
     coerce('margin.l');
     coerce('margin.r');
     coerce('margin.t');
@@ -1547,6 +1580,11 @@ plots.supplyLayoutGlobalDefaults = function(layoutIn, layoutOut, formatObj) {
         'supplyDrawNewShapeDefaults'
     )(layoutIn, layoutOut, coerce);
 
+    Registry.getComponentMethod(
+        'selections',
+        'supplyDrawNewSelectionDefaults'
+    )(layoutIn, layoutOut, coerce);
+
     coerce('meta');
 
     // do not include defaults in fullLayout when users do not set transition
@@ -1565,6 +1603,8 @@ plots.supplyLayoutGlobalDefaults = function(layoutIn, layoutOut, formatObj) {
         'fx',
         'supplyLayoutGlobalDefaults'
     )(layoutIn, layoutOut, coerce);
+
+    Lib.coerce(layoutIn, layoutOut, scatterAttrs, 'scattermode');
 };
 
 function getComputedSize(attr) {
@@ -1858,15 +1898,12 @@ function initMargins(fullLayout) {
     }
     if(!fullLayout._pushmargin) fullLayout._pushmargin = {};
     if(!fullLayout._pushmarginIds) fullLayout._pushmarginIds = {};
+    if(!fullLayout._reservedMargin) fullLayout._reservedMargin = {};
 }
 
 // non-negotiable - this is the smallest height we will allow users to specify via explicit margins
 var MIN_SPECIFIED_WIDTH = 2;
 var MIN_SPECIFIED_HEIGHT = 2;
-
-// could be exposed as an option - the smallest we will allow automargin to shrink a larger plot
-var MIN_REDUCED_WIDTH = 64;
-var MIN_REDUCED_HEIGHT = 64;
 
 /**
  * autoMargin: called by components that may need to expand the margins to
@@ -1888,17 +1925,19 @@ plots.autoMargin = function(gd, id, o) {
     var width = fullLayout.width;
     var height = fullLayout.height;
     var margin = fullLayout.margin;
+    var minreducedwidth = fullLayout.minreducedwidth;
+    var minreducedheight = fullLayout.minreducedheight;
 
     var minFinalWidth = Lib.constrain(
         width - margin.l - margin.r,
         MIN_SPECIFIED_WIDTH,
-        MIN_REDUCED_WIDTH
+        minreducedwidth
     );
 
     var minFinalHeight = Lib.constrain(
         height - margin.t - margin.b,
         MIN_SPECIFIED_HEIGHT,
-        MIN_REDUCED_HEIGHT
+        minreducedheight
     );
 
     var maxSpaceW = Math.max(0, width - minFinalWidth);
@@ -1956,6 +1995,17 @@ plots.autoMargin = function(gd, id, o) {
     }
 };
 
+function needsRedrawForShift(gd) {
+    if('_redrawFromAutoMarginCount' in gd._fullLayout) {
+        return false;
+    }
+    var axList = axisIDs.list(gd, '', true);
+    for(var ax in axList) {
+        if(axList[ax].autoshift || axList[ax].shift) return true;
+    }
+    return false;
+}
+
 plots.doAutoMargin = function(gd) {
     var fullLayout = gd._fullLayout;
     var width = fullLayout.width;
@@ -1966,6 +2016,7 @@ plots.doAutoMargin = function(gd) {
 
     var gs = fullLayout._size;
     var margin = fullLayout.margin;
+    var reservedMargins = {t: 0, b: 0, l: 0, r: 0};
     var oldMargins = Lib.extendFlat({}, gs);
 
     // adjust margins for outside components
@@ -1977,12 +2028,21 @@ plots.doAutoMargin = function(gd) {
     var mb = margin.b;
     var pushMargin = fullLayout._pushmargin;
     var pushMarginIds = fullLayout._pushmarginIds;
+    var minreducedwidth = fullLayout.minreducedwidth;
+    var minreducedheight = fullLayout.minreducedheight;
 
-    if(fullLayout.margin.autoexpand !== false) {
+    if(margin.autoexpand !== false) {
         for(var k in pushMargin) {
             if(!pushMarginIds[k]) delete pushMargin[k];
         }
 
+        var margins = gd._fullLayout._reservedMargin;
+        for(var key in margins) {
+            for(var side in margins[key]) {
+                var val = margins[key][side];
+                reservedMargins[side] = Math.max(reservedMargins[side], val);
+            }
+        }
         // fill in the requested margins
         pushMargin.base = {
             l: {val: 0, size: ml},
@@ -1991,9 +2051,23 @@ plots.doAutoMargin = function(gd) {
             b: {val: 0, size: mb}
         };
 
+
+        // make sure that the reservedMargin is the minimum needed
+        for(var s in reservedMargins) {
+            var autoMarginPush = 0;
+            for(var m in pushMargin) {
+                if(m !== 'base') {
+                    if(isNumeric(pushMargin[m][s].size)) {
+                        autoMarginPush = pushMargin[m][s].size > autoMarginPush ? pushMargin[m][s].size : autoMarginPush;
+                    }
+                }
+            }
+            var extraMargin = Math.max(0, (margin[s] - autoMarginPush));
+            reservedMargins[s] = Math.max(0, reservedMargins[s] - extraMargin);
+        }
+
         // now cycle through all the combinations of l and r
         // (and t and b) to find the required margins
-
         for(var k1 in pushMargin) {
             var pushleft = pushMargin[k1].l || {};
             var pushbottom = pushMargin[k1].b || {};
@@ -2001,14 +2075,16 @@ plots.doAutoMargin = function(gd) {
             var pl = pushleft.size;
             var fb = pushbottom.val;
             var pb = pushbottom.size;
+            var availableWidth = width - reservedMargins.r - reservedMargins.l;
+            var availableHeight = height - reservedMargins.t - reservedMargins.b;
 
             for(var k2 in pushMargin) {
                 if(isNumeric(pl) && pushMargin[k2].r) {
                     var fr = pushMargin[k2].r.val;
                     var pr = pushMargin[k2].r.size;
                     if(fr > fl) {
-                        var newL = (pl * fr + (pr - width) * fl) / (fr - fl);
-                        var newR = (pr * (1 - fl) + (pl - width) * (1 - fr)) / (fr - fl);
+                        var newL = (pl * fr + (pr - availableWidth) * fl) / (fr - fl);
+                        var newR = (pr * (1 - fl) + (pl - availableWidth) * (1 - fr)) / (fr - fl);
                         if(newL + newR > ml + mr) {
                             ml = newL;
                             mr = newR;
@@ -2020,8 +2096,8 @@ plots.doAutoMargin = function(gd) {
                     var ft = pushMargin[k2].t.val;
                     var pt = pushMargin[k2].t.size;
                     if(ft > fb) {
-                        var newB = (pb * ft + (pt - height) * fb) / (ft - fb);
-                        var newT = (pt * (1 - fb) + (pb - height) * (1 - ft)) / (ft - fb);
+                        var newB = (pb * ft + (pt - availableHeight) * fb) / (ft - fb);
+                        var newT = (pt * (1 - fb) + (pb - availableHeight) * (1 - ft)) / (ft - fb);
                         if(newB + newT > mb + mt) {
                             mb = newB;
                             mt = newT;
@@ -2035,13 +2111,13 @@ plots.doAutoMargin = function(gd) {
     var minFinalWidth = Lib.constrain(
         width - margin.l - margin.r,
         MIN_SPECIFIED_WIDTH,
-        MIN_REDUCED_WIDTH
+        minreducedwidth
     );
 
     var minFinalHeight = Lib.constrain(
         height - margin.t - margin.b,
         MIN_SPECIFIED_HEIGHT,
-        MIN_REDUCED_HEIGHT
+        minreducedheight
     );
 
     var maxSpaceW = Math.max(0, width - minFinalWidth);
@@ -2063,16 +2139,17 @@ plots.doAutoMargin = function(gd) {
         }
     }
 
-    gs.l = Math.round(ml);
-    gs.r = Math.round(mr);
-    gs.t = Math.round(mt);
-    gs.b = Math.round(mb);
+
+    gs.l = Math.round(ml) + reservedMargins.l;
+    gs.r = Math.round(mr) + reservedMargins.r;
+    gs.t = Math.round(mt) + reservedMargins.t;
+    gs.b = Math.round(mb) + reservedMargins.b;
     gs.p = Math.round(margin.pad);
     gs.w = Math.round(width) - gs.l - gs.r;
     gs.h = Math.round(height) - gs.t - gs.b;
 
     // if things changed and we're not already redrawing, trigger a redraw
-    if(!fullLayout._replotting && plots.didMarginChange(oldMargins, gs)) {
+    if(!fullLayout._replotting && (plots.didMarginChange(oldMargins, gs) || needsRedrawForShift(gd))) {
         if('_redrawFromAutoMarginCount' in fullLayout) {
             fullLayout._redrawFromAutoMarginCount++;
         } else {
@@ -2210,11 +2287,29 @@ plots.graphJson = function(gd, dataonly, mode, output, useDefaults, includeConfi
             return o;
         }
 
-        if(Array.isArray(d)) {
+        var dIsArray = Array.isArray(d);
+        var dIsTypedArray = Lib.isTypedArray(d);
+
+        if((dIsArray || dIsTypedArray) && d.dtype && d.shape) {
+            var bdata = d.bdata;
+            return stripObj({
+                dtype: d.dtype,
+                shape: d.shape,
+
+                bdata:
+                    // case of ArrayBuffer
+                    Lib.isArrayBuffer(bdata) ? b64encode.encode(bdata) :
+                    // case of b64 string
+                    bdata
+
+            }, keepFunction);
+        }
+
+        if(dIsArray) {
             return d.map(function(x) {return stripObj(x, keepFunction);});
         }
 
-        if(Lib.isTypedArray(d)) {
+        if(dIsTypedArray) {
             return Lib.simpleMap(d, Lib.identity);
         }
 
@@ -2909,6 +3004,7 @@ function _transition(gd, transitionOpts, opts) {
         interruptPreviousTransitions,
         opts.prepareFn,
         plots.rehover,
+        plots.reselect,
         executeTransitions
     ];
 
@@ -3100,7 +3196,7 @@ plots.doCalcdata = function(gd, traces) {
     Registry.getComponentMethod('errorbars', 'calc')(gd);
 };
 
-var sortAxisCategoriesByValueRegex = /(total|sum|min|max|mean|median) (ascending|descending)/;
+var sortAxisCategoriesByValueRegex = /(total|sum|min|max|mean|geometric mean|median) (ascending|descending)/;
 
 function sortAxisCategoriesByValue(axList, gd) {
     var affectedTraces = [];
@@ -3130,13 +3226,22 @@ function sortAxisCategoriesByValue(axList, gd) {
     }
 
     var aggFn = {
-        'min': function(values) {return Lib.aggNums(Math.min, null, values);},
-        'max': function(values) {return Lib.aggNums(Math.max, null, values);},
-        'sum': function(values) {return Lib.aggNums(function(a, b) { return a + b;}, null, values);},
-        'total': function(values) {return Lib.aggNums(function(a, b) { return a + b;}, null, values);},
-        'mean': function(values) {return Lib.mean(values);},
-        'median': function(values) {return Lib.median(values);}
+        min: function(values) {return Lib.aggNums(Math.min, null, values);},
+        max: function(values) {return Lib.aggNums(Math.max, null, values);},
+        sum: function(values) {return Lib.aggNums(function(a, b) { return a + b;}, null, values);},
+        total: function(values) {return Lib.aggNums(function(a, b) { return a + b;}, null, values);},
+        mean: function(values) {return Lib.mean(values);},
+        'geometric mean': function(values) {return Lib.geometricMean(values);},
+        median: function(values) {return Lib.median(values);}
     };
+
+    function sortAscending(a, b) {
+        return a[1] - b[1];
+    }
+
+    function sortDescending(a, b) {
+        return b[1] - a[1];
+    }
 
     for(i = 0; i < axList.length; i++) {
         var ax = axList[i];
@@ -3259,9 +3364,7 @@ function sortAxisCategoriesByValue(axList, gd) {
             }
 
             // Sort by aggregated value
-            categoriesAggregatedValue.sort(function(a, b) {
-                return a[1] - b[1];
-            });
+            categoriesAggregatedValue.sort(order === 'descending' ? sortDescending : sortAscending);
 
             ax._categoriesAggregatedValue = categoriesAggregatedValue;
 
@@ -3269,11 +3372,6 @@ function sortAxisCategoriesByValue(axList, gd) {
             ax._initialCategories = categoriesAggregatedValue.map(function(c) {
                 return c[0];
             });
-
-            // Reverse if descending
-            if(order === 'descending') {
-                ax._initialCategories.reverse();
-            }
 
             // Sort all matching axes
             affectedTraces = affectedTraces.concat(ax.sortByInitialCategories());
@@ -3363,6 +3461,19 @@ plots.redrag = function(gd) {
     if(gd._fullLayout._redrag) {
         gd._fullLayout._redrag();
     }
+};
+
+plots.reselect = function(gd) {
+    var fullLayout = gd._fullLayout;
+
+    var A = (gd.layout || {}).selections;
+    var B = fullLayout._previousSelections;
+    fullLayout._previousSelections = A;
+
+    var mayEmitSelected = fullLayout._reselect ||
+        JSON.stringify(A) !== JSON.stringify(B);
+
+    Registry.getComponentMethod('selections', 'reselect')(gd, mayEmitSelected);
 };
 
 plots.generalUpdatePerTraceModule = function(gd, subplot, subplotCalcData, subplotLayout) {

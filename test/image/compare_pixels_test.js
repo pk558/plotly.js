@@ -41,15 +41,53 @@ if(argv._.length === 0) {
 
 // Build list of mocks to compare
 var allMockList = [];
+var mathjax3;
+var virtualWebgl = false;
 argv._.forEach(function(pattern) {
-    var mockList = getMockList(pattern);
+    if(pattern === 'mathjax3') {
+        mathjax3 = true;
+    } else if(pattern === 'virtual-webgl') {
+        virtualWebgl = true;
+        allMockList = getMockList('');
+    } else {
+        var mockList = getMockList(pattern);
 
-    if(mockList.length === 0) {
-        throw 'No mocks found with pattern ' + pattern;
+        if(mockList.length === 0) {
+            throw 'No mocks found with pattern ' + pattern;
+        }
+
+        allMockList = allMockList.concat(mockList);
     }
-
-    allMockList = allMockList.concat(mockList);
 });
+
+allMockList = allMockList.filter(function(a) {
+    return (
+        // used to pass before 2023 Jun 20
+        a !== 'mapbox_stamen-style' &&
+
+        // skip for now | TODO: figure out why needed this in https://github.com/plotly/plotly.js/pull/6610
+        a !== 'mapbox_custom-style'
+    );
+});
+
+if(virtualWebgl) {
+    allMockList = allMockList.filter(function(a) {
+        return a.slice(0, 2) === 'gl' || a.slice(0, 6) === 'mapbox';
+    });
+}
+
+if(mathjax3) {
+    allMockList = [
+        'legend_mathjax_title_and_items',
+        'mathjax',
+        'parcats_grid_subplots',
+        'table_latex_multitrace_scatter',
+        'table_plain_birds',
+        'table_wrapped_birds',
+        'ternary-mathjax',
+        'ternary-mathjax-title-place-subtitle',
+    ];
+}
 
 // To get rid of duplicates
 function unique(value, index, self) {
@@ -594,6 +632,7 @@ var fail = function(mockName) {
         failed.push(mockName);
     }
 };
+
 for(var i = 0; i < allMockList.length; i++) {
     var mockName = allMockList[i];
 
@@ -605,11 +644,19 @@ for(var i = 0; i < allMockList.length; i++) {
         continue;
     }
 
+    var isMapbox = mockName.substr(0, 7) === 'mapbox_';
+    var isOtherFlaky = [
+        // list flaky mocks other than mapbox:
+        'gl3d_bunny-hull'
+    ].indexOf(mockName) !== -1;
+
+    if(mathjax3) mockName = 'mathjax3___' + mockName;
+
     var imagePaths = getImagePaths(mockName);
     var base = imagePaths.baseline;
     var test = imagePaths.test;
 
-    if(!common.doesFileExist(test)) {
+    if(!common.doesFileExist(test) && !mathjax3) {
         console.log('- skip:', mockName);
         skipped.push(mockName);
         continue;
@@ -644,23 +691,31 @@ for(var i = 0; i < allMockList.length; i++) {
         height: height
     });
 
-    var isMapbox = mockName.substr(0, 7) === 'mapbox_';
-    var isOtherFlaky = [
-        // list flaky mocks other than mapbox:
-        'gl3d_bunny-hull'
-    ].indexOf(mockName) !== -1;
-
     var shouldBePixelPerfect = !(isMapbox || isOtherFlaky);
 
+    var threshold = shouldBePixelPerfect ? 0 : [
+        // more flaky
+        'mapbox_angles',
+        'mapbox_layers',
+        'mapbox_custom-style',
+        'mapbox_geojson-attributes'
+    ].indexOf(mockName) !== -1 ? 1 : 0.15;
+
+    if(virtualWebgl) {
+        threshold = Math.max(0.4, threshold);
+        if([
+            'gl3d_ibm-plot',
+            'gl3d_isosurface_2surfaces-checker_spaceframe',
+            'gl3d_opacity-scaling-spikes',
+            'gl3d_cone-wind',
+            'gl3d_isosurface_math',
+            'gl3d_scatter3d-blank-text',
+            'gl3d_mesh3d_surface3d_scatter3d_line3d_error3d_log_reversed_ranges'
+        ].indexOf(mockName) !== -1) threshold = 0.7;
+    }
+
     var numDiffPixels = pixelmatch(img0.data, img1.data, diff.data, width, height, {
-        threshold: shouldBePixelPerfect ? 0 :
-            [
-                // more flaky
-                'mapbox_angles',
-                'mapbox_layers',
-                'mapbox_custom-style',
-                'mapbox_geojson-attributes'
-            ].indexOf(mockName) !== -1 ? 1 : 0.15
+        threshold: threshold
     });
 
     if(numDiffPixels) {

@@ -2,13 +2,17 @@
 
 var path = require('path');
 var minimist = require('minimist');
+var NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
+var LoaderOptionsPlugin = require('webpack').LoaderOptionsPlugin;
 var constants = require('../../tasks/util/constants');
+var webpackConfig = require('../../webpack.config.js');
 
 var isCI = Boolean(process.env.CI);
 
 var argv = minimist(process.argv.slice(4), {
     string: ['bundleTest', 'width', 'height'],
-    'boolean': [
+    boolean: [
+        'mathjax3',
         'info',
         'nowatch', 'randomize',
         'failFast', 'doNotFailOnEmptyTestSuite',
@@ -16,14 +20,14 @@ var argv = minimist(process.argv.slice(4), {
         'verbose', 'showSkipped', 'report-progress', 'report-spec', 'report-dots'
     ],
     alias: {
-        'Chrome': 'chrome',
-        'Firefox': ['firefox', 'FF'],
-        'IE11': ['ie11'],
-        'bundleTest': ['bundletest', 'bundle_test'],
-        'nowatch': 'no-watch',
-        'failFast': 'fail-fast',
+        Chrome: 'chrome',
+        Firefox: ['firefox', 'FF'],
+        IE11: ['ie11'],
+        bundleTest: ['bundletest', 'bundle_test'],
+        nowatch: 'no-watch',
+        failFast: 'fail-fast',
     },
-    'default': {
+    default: {
         info: false,
         nowatch: isCI,
         randomize: false,
@@ -60,6 +64,7 @@ if(argv.info) {
         '',
         'Other options:',
         '  - `--info`: show this info message',
+        '  - `--mathjax3`: to load mathjax v3 in relevant test',
         '  - `--Chrome` (alias `--chrome`): run test in (our custom) Chrome browser',
         '  - `--Firefox` (alias `--FF`, `--firefox`): run test in (our custom) Firefox browser',
         '  - `--IE11` (alias -- `ie11`)`: run test in IE11 browser',
@@ -116,13 +121,13 @@ if(isFullSuite) {
     testFileGlob = path.join(__dirname, 'tests', glob(merge(argv._).map(basename)));
 }
 
-var pathToShortcutPath = path.join(__dirname, '..', '..', 'tasks', 'util', 'shortcut_paths.js');
-var pathToStrictD3 = path.join(__dirname, '..', '..', 'tasks', 'util', 'strict_d3.js');
 var pathToJQuery = path.join(__dirname, 'assets', 'jquery-1.8.3.min.js');
 var pathToCustomMatchers = path.join(__dirname, 'assets', 'custom_matchers.js');
 var pathToUnpolyfill = path.join(__dirname, 'assets', 'unpolyfill.js');
 var pathToSaneTopojsonDist = path.join(__dirname, '..', '..', 'node_modules', 'sane-topojson', 'dist');
-var pathToMathJax = path.join(__dirname, '..', '..', 'node_modules', 'mathjax');
+var pathToMathJax2 = path.join(__dirname, '..', '..', 'node_modules', 'mathjax-v2');
+var pathToMathJax3 = path.join(__dirname, '..', '..', 'node_modules', 'mathjax-v3');
+var pathToVirtualWebgl = path.join(__dirname, '..', '..', 'node_modules', 'virtual-webgl', 'src', 'virtual-webgl.js');
 
 var reporters = [];
 if(argv['report-progress'] || argv['report-spec'] || argv['report-dots']) {
@@ -172,7 +177,7 @@ func.defaultConfig = {
 
     // frameworks to use
     // available frameworks: https://npmjs.org/browse/keyword/karma-adapter
-    frameworks: ['jasmine', 'jasmine-spec-tags', 'browserify', 'viewport'],
+    frameworks: ['jasmine', 'jasmine-spec-tags', 'webpack', 'viewport'],
 
     // list of files / patterns to load in the browser
     //
@@ -180,9 +185,10 @@ func.defaultConfig = {
     files: [
         pathToCustomMatchers,
         pathToUnpolyfill,
-        // available to fetch from /base/node_modules/mathjax/
+        // available to fetch from /base/node_modules/mathjax-v2/
         // more info: http://karma-runner.github.io/3.0/config/files.html
-        {pattern: pathToMathJax + '/**', included: false, watched: false, served: true},
+        {pattern: pathToMathJax2 + '/**', included: false, watched: false, served: true},
+        {pattern: pathToMathJax3 + '/**', included: false, watched: false, served: true},
         // available to fetch from /base/node_modules/sane-topojson/dist/
         {pattern: pathToSaneTopojsonDist + '/**', included: false, watched: false, served: true}
     ],
@@ -256,11 +262,25 @@ func.defaultConfig = {
         }
     },
 
-    browserify: {
-        transform: [pathToStrictD3, pathToShortcutPath],
-        extensions: ['.js'],
-        watch: !argv.nowatch,
-        debug: true
+    webpack: {
+        target: ['web', 'es5'],
+        module: {
+            rules: webpackConfig.module.rules
+        },
+        resolve: {
+            fallback: {
+                stream: require.resolve('stream-browserify')
+            }
+        },
+        plugins: [
+            new NodePolyfillPlugin({ includeAliases: ['process'] }),
+            new LoaderOptionsPlugin({
+                // test: /\.xxx$/, // may apply this only for some modules
+                options: {
+                    library: webpackConfig.output.library
+                }
+            })
+        ]
     },
 
     client: {
@@ -285,6 +305,8 @@ func.defaultConfig = {
         tagPrefix: '@',
         skipTags: isCI ? 'noCI' : null,
 
+        mathjaxVersion: argv.mathjax3 ? 3 : 2,
+
         // See https://jasmine.github.io/api/3.4/Configuration.html
         jasmine: {
             random: argv.randomize,
@@ -306,25 +328,35 @@ func.defaultConfig = {
     failOnEmptyTestSuite: !argv.doNotFailOnEmptyTestSuite
 };
 
-func.defaultConfig.preprocessors[pathToCustomMatchers] = ['browserify'];
+func.defaultConfig.preprocessors[pathToCustomMatchers] = ['webpack'];
+func.defaultConfig.preprocessors[testFileGlob] = ['webpack'];
 
 if(isBundleTest) {
     switch(basename(testFileGlob)) {
         case 'minified_bundle':
             func.defaultConfig.files.push(constants.pathToPlotlyBuildMin);
-            func.defaultConfig.preprocessors[testFileGlob] = ['browserify'];
+            func.defaultConfig.module = {
+                rules: {
+                    test: /\.js$/,
+                    use: [
+                        'transform-loader?' + path.resolve(__dirname, 'tasks/compress_attributes.js')
+                    ]
+                }
+            };
             break;
         case 'plotschema':
-            func.defaultConfig.browserify.ignoreTransform = './tasks/compress_attributes.js';
-            func.defaultConfig.preprocessors[testFileGlob] = ['browserify'];
-            break;
-        default:
-            func.defaultConfig.preprocessors[testFileGlob] = ['browserify'];
+            // no tasks/compress_attributes in this case
             break;
     }
 } else {
     func.defaultConfig.files.push(pathToJQuery);
-    func.defaultConfig.preprocessors[testFileGlob] = ['browserify'];
+}
+
+if(argv.virtualWebgl) {
+    // add virtual-webgl to the top
+    func.defaultConfig.files = [
+        pathToVirtualWebgl
+    ].concat(func.defaultConfig.files);
 }
 
 // lastly, load test file glob
