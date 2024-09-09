@@ -244,7 +244,7 @@ function plotOne(gd, plotinfo, cdSubplot, transitionOpts, makeOnCompleteCallback
                 if(cdModule.length) {
                     layerData.push({
                         i: traceLayerClasses.indexOf(classBaseName),
-                        zorder: z,
+                        _zindex: z,
                         className: className,
                         plotMethod: plotMethod,
                         cdModule: cdModule
@@ -260,7 +260,7 @@ function plotOne(gd, plotinfo, cdSubplot, transitionOpts, makeOnCompleteCallback
     // Sort the layers primarily by z, then by i
     layerData.sort(function(a, b) {
         return (
-            (a.zorder || 0) - (b.zorder || 0) ||
+            (a._zindex || 0) - (b._zindex || 0) ||
             (a.i - b.i)
         );
     });
