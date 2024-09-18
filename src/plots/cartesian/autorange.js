@@ -7,6 +7,7 @@ var Lib = require('../../lib');
 var FP_SAFE = require('../../constants/numerical').FP_SAFE;
 var Registry = require('../../registry');
 var Drawing = require('../../components/drawing');
+var zindexSeparator = require('../../plots/cartesian/constants').zindexSeparator;
 
 var axIds = require('./axis_ids');
 var getFromId = axIds.getFromId;
@@ -253,7 +254,11 @@ function padInsideLabelsOnAnchorAxis(fullLayout, ax, max) {
     var isX = ax._id.charAt(0) === 'x';
 
     for(var subplot in fullLayout._plots) {
+        if(subplot.indexOf(zindexSeparator) !== -1) continue;
+
         var plotinfo = fullLayout._plots[subplot];
+
+
 
         if(ax._id !== plotinfo.xaxis._id && ax._id !== plotinfo.yaxis._id) continue;
 
