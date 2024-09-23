@@ -5,7 +5,7 @@
     ]
   },
   "scripts": {
-    "bundle-stackgl": "webpack --mode production"
+    "bundle-stackgl": "node bundle.mjs"
   },
   "dependencies": {
     "@plotly/point-cluster": "^3.1.9",
