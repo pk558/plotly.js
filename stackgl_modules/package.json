@@ -51,7 +51,9 @@
     "zero-crossings": "plotly/zero-crossings#v1.1.0"
   },
   "devDependencies": {
+    "buffer": "^6.0.3",
     "esbuild": "^0.23.1",
-    "ify-loader": "1.1.0"
+    "esbuild-plugin-environment": "^0.4.0",
+    "esbuild-plugin-glsl": "^1.2.2"
   }
 }
