@@ -13,26 +13,7 @@ function isVisible(ax) {
 exports.isVisible = isVisible;
 
 exports.makeData = function(fullLayout) {
-    var axes = axisIDs.list({ _fullLayout: fullLayout }, 'x', true);
-    var margin = fullLayout.margin;
-    var rangeSliderData = [];
-
-    if(!fullLayout._has('gl2d')) {
-        for(var i = 0; i < axes.length; i++) {
-            var ax = axes[i];
-
-            if(isVisible(ax)) {
-                rangeSliderData.push(ax);
-
-                var opts = ax[name];
-                opts._id = name + ax._id;
-                opts._height = (fullLayout.height - margin.b - margin.t) * opts.thickness;
-                opts._offsetShift = Math.floor(opts.borderwidth / 2);
-            }
-        }
-    }
-
-    fullLayout._rangeSliderData = rangeSliderData;
+    fullLayout._rangeSliderData = [];
 };
 
 exports.autoMarginOpts = function(gd, ax) {
